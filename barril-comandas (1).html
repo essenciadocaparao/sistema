@@ -1,0 +1,3089 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Barril — Comandas, Estoque & Caixa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --madeira: #211a13;
+    --madeira-2: #55493c;
+    --cobre: #a8672f;
+    --cobre-claro: #c98f57;
+    --creme: #faf8f4;
+    --creme-2: #eee7da;
+    --verde: #3f6b4c;
+    --vermelho: #a24238;
+    --azul: #3f5f87;
+    --roxo: #6c5a89;
+    --texto-escuro: #201a14;
+    --linha: #e2dbcd;
+    --sombra: rgba(20, 12, 6, 0.08);
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'Inter', -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--creme);
+    font-family: var(--font-body);
+    color: var(--texto-escuro);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  #root { min-height: 100%; }
+
+  ::selection { background: var(--cobre-claro); color: #fff; }
+
+  button { font-family: inherit; cursor: pointer; border: none; background: none; }
+  button:disabled { cursor: not-allowed; opacity: 0.45; }
+  input, select { font-family: inherit; }
+
+  /* ---------- App shell ---------- */
+  .app {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 22px 18px 100px;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 2px 18px;
+    border-bottom: 1px solid var(--linha);
+    margin-bottom: 24px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .caixa-pill {
+    display: flex; align-items: center; gap: 7px;
+    padding: 7px 13px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    border: 1px solid var(--linha);
+    background: var(--creme-2);
+    color: var(--madeira-2);
+    white-space: nowrap;
+  }
+  .caixa-pill:hover { border-color: var(--cobre-claro); }
+  .caixa-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--madeira-2); flex-shrink: 0; }
+  .caixa-pill.aberto { background: rgba(63,107,76,0.1); color: var(--verde); border-color: rgba(63,107,76,0.25); }
+  .caixa-pill.aberto .caixa-dot { background: var(--verde); box-shadow: 0 0 0 3px rgba(63,107,76,0.18); }
+  .caixa-pill.fechado { background: rgba(162,66,56,0.08); color: var(--vermelho); border-color: rgba(162,66,56,0.2); }
+  .caixa-pill.fechado .caixa-dot { background: var(--vermelho); }
+
+  .caixa-edit-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 999px;
+    border: 1px solid var(--linha); background: #fff; color: var(--madeira-2);
+    cursor: pointer; flex-shrink: 0;
+  }
+  .caixa-edit-btn:hover { border-color: var(--cobre-claro); color: var(--madeira); }
+  .caixa-edit-btn svg { width: 15px; height: 15px; }
+
+  .ajuste-item {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--linha);
+  }
+  .ajuste-item:last-child { border-bottom: none; }
+
+  .caixa-diff-badge {
+    font-size: 11px; font-weight: 700; font-family: var(--font-mono);
+    padding: 4px 9px; border-radius: 7px; white-space: nowrap;
+  }
+  .caixa-diff-badge.ok { background: rgba(63,107,76,0.12); color: var(--verde); }
+  .caixa-diff-badge.sobra { background: rgba(63,95,135,0.12); color: var(--azul); }
+  .caixa-diff-badge.falta { background: rgba(162,66,56,0.12); color: var(--vermelho); }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .brand-mark {
+    width: 38px; height: 38px;
+    background: var(--madeira);
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--creme);
+    flex-shrink: 0;
+  }
+  .brand-mark svg { width: 19px; height: 19px; display: block; }
+
+  .brand-text h1 {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--madeira);
+    line-height: 1.15;
+  }
+  .brand-text p {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--madeira-2);
+    font-weight: 600;
+    margin-top: 2px;
+  }
+
+  .clock {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--madeira-2);
+    text-align: right;
+    line-height: 1.5;
+  }
+  .clock .date { font-weight: 700; color: var(--madeira); text-transform: capitalize; }
+
+  /* ---------- Tabs ---------- */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 24px;
+    background: var(--creme-2);
+    padding: 4px;
+    border-radius: 10px;
+  }
+  .tab {
+    flex: 1;
+    padding: 10px 10px;
+    border-radius: 7px;
+    font-weight: 600;
+    font-size: 13.5px;
+    color: var(--madeira-2);
+    transition: background 0.12s ease, color 0.12s ease;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    position: relative;
+  }
+  .tab.active {
+    background: var(--madeira);
+    color: var(--creme);
+  }
+  .tab:not(.active):hover { background: rgba(33,26,19,0.06); }
+  .tab svg, .empty-state svg, .toast svg { display: block; }
+  .tab svg { width: 15px; height: 15px; flex-shrink: 0; opacity: 0.85; }
+  .tab-badge {
+    background: var(--madeira); color: var(--creme);
+    font-size: 10px; font-weight: 700;
+    border-radius: 20px; padding: 1px 6px;
+    font-family: var(--font-mono);
+  }
+  .tab.active .tab-badge { background: var(--cobre-claro); color: var(--madeira); }
+
+  /* ---------- Cards ---------- */
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid var(--linha);
+  }
+
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 16.5px;
+    font-weight: 600;
+    color: var(--madeira);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .section-sub { font-size: 12px; color: var(--madeira-2); font-weight: 500; font-family: var(--font-body); margin-top: 2px; }
+
+  /* ---------- Dashboard grid ---------- */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  @media (max-width: 800px) {
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .stat-card {
+    background: #fff;
+    color: var(--madeira);
+    border-radius: 12px;
+    border: 1px solid var(--linha);
+    padding: 16px 16px 14px;
+    position: relative;
+  }
+  .stat-card.destaque {
+    background: var(--madeira);
+    color: var(--creme);
+    border-color: var(--madeira);
+  }
+  .stat-card.destaque .stat-label { color: var(--cobre-claro); }
+  .stat-card.destaque .stat-sub { color: rgba(242,232,216,0.6); }
+
+  .stat-label {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    font-weight: 700;
+    color: var(--madeira-2);
+    margin-bottom: 9px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .stat-label svg { width: 13px; height: 13px; opacity: 0.8; }
+  .stat-value {
+    font-family: var(--font-display);
+    font-size: 25px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-sub {
+    font-size: 12px;
+    margin-top: 6px;
+    color: var(--madeira-2);
+    font-weight: 500;
+  }
+
+  /* payment method mini-cards */
+  .method-stat {
+    background: #fff;
+    border: 1px solid var(--linha);
+    border-radius: 12px;
+    padding: 13px 15px;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+  }
+  .method-stat-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--creme-2);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--madeira-2);
+    flex-shrink: 0;
+  }
+  .method-stat-icon svg { width: 16px; height: 16px; }
+  .method-stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--madeira-2); font-weight: 700; }
+  .method-stat-value { font-family: var(--font-mono); font-weight: 700; font-size: 16px; color: var(--madeira); margin-top: 2px; }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 14px;
+  }
+  @media (max-width: 800px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+
+  .panel { padding: 18px; margin-bottom: 14px; }
+
+  /* ---------- Sales feed ---------- */
+  .feed-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--creme-2);
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .feed-item:last-child { border-bottom: none; }
+  .feed-left { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+  .feed-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--verde); flex-shrink: 0;
+    margin-top: 6px;
+  }
+  .feed-name { font-weight: 600; font-size: 13.5px; }
+  .feed-meta { font-size: 11.5px; color: var(--madeira-2); }
+  .feed-value { font-family: var(--font-mono); font-weight: 700; color: var(--verde); font-size: 13.5px; white-space: nowrap; }
+  .feed-items-list { font-size: 12px; color: var(--madeira-2); margin-top: 2px; }
+  .feed-produtos {
+    display: flex; flex-wrap: wrap; gap: 5px;
+    margin-top: 6px;
+  }
+  .feed-produto-badge {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--madeira-2);
+    background: var(--creme-2);
+    border-radius: 6px;
+    padding: 3px 8px;
+    white-space: nowrap;
+  }
+  .feed-obs {
+    font-size: 11.5px;
+    font-style: italic;
+    color: var(--madeira-2);
+    margin-top: 5px;
+    opacity: 0.85;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 26px 10px;
+    color: var(--madeira-2);
+  }
+  .empty-state .icon { margin-bottom: 8px; display: flex; justify-content: center; color: var(--madeira-2); opacity: 0.5; }
+  .empty-state .icon svg { width: 24px; height: 24px; }
+  .empty-state p { font-size: 13px; font-weight: 600; }
+  .empty-state span { font-size: 12px; font-weight: 500; opacity: 0.85; }
+
+  /* ---------- Product grid ---------- */
+  .prod-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
+    gap: 8px;
+  }
+  .prod-btn {
+    background: #fff;
+    border: 1px solid var(--linha);
+    border-radius: 10px;
+    padding: 12px 12px;
+    text-align: left;
+    transition: border-color 0.12s ease;
+    position: relative;
+  }
+  .prod-btn:hover { border-color: var(--cobre); }
+  .prod-btn:active { background: var(--creme-2); }
+  .prod-btn.low { border-color: rgba(162,66,56,0.4); }
+  .prod-btn.out { opacity: 0.4; pointer-events: none; }
+
+  .prod-name { font-weight: 600; font-size: 13.5px; margin-bottom: 3px; line-height: 1.25; padding-right: 40px; }
+  .prod-price { font-family: var(--font-mono); color: var(--madeira-2); font-weight: 700; font-size: 12.5px; }
+  .prod-stock {
+    position: absolute; top: 10px; right: 10px;
+    font-size: 10px; font-weight: 700;
+    color: var(--madeira-2);
+    background: var(--creme-2);
+    padding: 2px 6px; border-radius: 5px;
+    font-family: var(--font-mono);
+  }
+  .prod-btn.low .prod-stock { background: #f2e2df; color: var(--vermelho); }
+
+  .kit-badge {
+    position: absolute; top: 10px; left: 10px;
+    font-size: 9px; font-weight: 800; letter-spacing: 0.04em;
+    color: #fff; background: var(--cobre);
+    padding: 2px 6px; border-radius: 5px;
+  }
+  .kit-badge-inline {
+    position: static; display: inline-block; margin-left: 6px;
+    vertical-align: middle; transform: translateY(-1px);
+  }
+  .prod-btn .kit-badge + .prod-name { padding-left: 34px; }
+
+  /* ---------- Forms ---------- */
+  .form-row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .form-field { flex: 1; min-width: 120px; }
+  .form-field label {
+    display: block; font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--madeira-2); margin-bottom: 5px;
+  }
+  .form-field input, .form-field select {
+    width: 100%;
+    padding: 9px 11px;
+    border-radius: 8px;
+    border: 1px solid var(--linha);
+    background: var(--creme);
+    font-size: 13.5px;
+    color: var(--texto-escuro);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .form-field input:focus, .form-field select:focus { border-color: var(--cobre); }
+
+  .obs-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 9px;
+    border: 1px solid var(--linha);
+    background: var(--creme);
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--texto-escuro);
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .obs-textarea:focus { border-color: var(--cobre); }
+
+  /* ---------- Busca de produtos ---------- */
+  .prod-search-wrap {
+    position: relative;
+    margin: 12px 0 14px;
+  }
+  .prod-search-icon {
+    position: absolute;
+    left: 12px; top: 50%;
+    transform: translateY(-50%);
+    width: 16px; height: 16px;
+    color: var(--madeira-2);
+    pointer-events: none;
+  }
+  .prod-search-input {
+    width: 100%;
+    padding: 10px 36px 10px 36px;
+    border-radius: 9px;
+    border: 1px solid var(--linha);
+    background: var(--creme);
+    font-size: 13.5px;
+    color: var(--texto-escuro);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .prod-search-input:focus { border-color: var(--cobre); }
+  .prod-search-clear {
+    position: absolute;
+    right: 8px; top: 50%;
+    transform: translateY(-50%);
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    color: var(--madeira-2);
+    background: var(--creme-2);
+  }
+  .prod-search-clear:hover { color: var(--madeira); }
+
+  .btn {
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13.5px;
+    transition: opacity 0.12s, background 0.12s;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .btn-primary { background: var(--madeira); color: var(--creme); }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-verde { background: var(--verde); color: #fff; }
+  .btn-verde:hover { opacity: 0.9; }
+  .btn-outline { background: transparent; border: 1px solid var(--linha); color: var(--madeira); }
+  .btn-outline:hover { border-color: var(--madeira); }
+  .btn-danger-ghost { color: var(--vermelho); font-size: 11.5px; font-weight: 700; padding: 4px 8px; flex-shrink: 0; }
+  .btn-danger-ghost:hover { text-decoration: underline; }
+  .btn-verde-ghost { color: var(--verde); font-size: 11.5px; font-weight: 700; padding: 4px 8px; flex-shrink: 0; }
+  .btn-verde-ghost:hover { text-decoration: underline; }
+  .btn-verde-ghost:disabled { color: var(--madeira-2); cursor: not-allowed; opacity: 0.6; }
+  .btn-verde-ghost:disabled:hover { text-decoration: none; }
+  .btn-edit-ghost { color: var(--madeira-2); font-size: 11.5px; font-weight: 700; padding: 4px 8px; flex-shrink: 0; }
+  .btn-edit-ghost:hover { color: var(--cobre); text-decoration: underline; }
+  .row-actions { display: flex; align-items: center; gap: 2px; justify-content: flex-end; }
+  .btn-full { width: 100%; }
+  .btn-sm { padding: 7px 13px; font-size: 12.5px; }
+
+  /* ---------- Table (Estoque) ---------- */
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--madeira-2); padding: 0 10px 10px; font-weight: 700;
+  }
+  tbody td { padding: 11px 10px; border-top: 1px solid var(--creme-2); font-size: 13.5px; vertical-align: middle; }
+  tbody tr:hover { background: var(--creme); }
+  .qty-badge {
+    font-family: var(--font-mono); font-weight: 700;
+    padding: 3px 9px; border-radius: 6px; font-size: 12.5px;
+    background: var(--creme-2); display: inline-block;
+  }
+  .qty-badge.low { background: #f2e2df; color: var(--vermelho); }
+
+  .stepper { display: flex; align-items: center; gap: 5px; }
+  .step-btn {
+    width: 24px; height: 24px; border-radius: 6px;
+    background: var(--creme-2); font-weight: 700; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--madeira);
+    flex-shrink: 0;
+  }
+  .step-btn:hover:not(:disabled) { background: var(--cobre-claro); color: #fff; }
+  .step-qty { font-family: var(--font-mono); font-weight: 700; min-width: 20px; text-align: center; font-size: 13px; }
+
+  /* ---------- Comandas ---------- */
+  .comanda-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 10px;
+  }
+  .comanda-card {
+    background: #fff;
+    border: 1px solid var(--linha);
+    border-radius: 12px;
+    padding: 15px;
+    text-align: left;
+    transition: border-color 0.12s ease;
+    position: relative;
+  }
+  .comanda-card:hover { border-color: var(--cobre); }
+  .comanda-card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 9px; }
+  .comanda-nome { font-family: var(--font-display); font-weight: 600; font-size: 15.5px; color: var(--madeira); line-height: 1.2; }
+  .comanda-mesa { font-size: 10.5px; color: var(--cobre); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 3px; }
+  .comanda-time { font-size: 10.5px; color: var(--madeira-2); font-family: var(--font-mono); }
+  .comanda-total { font-family: var(--font-mono); font-weight: 700; font-size: 18px; color: var(--madeira); margin-top: 5px; }
+  .comanda-itens-count { font-size: 11.5px; color: var(--madeira-2); margin-top: 2px; }
+  .comanda-new-card {
+    border: 1px dashed var(--linha);
+    border-radius: 12px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 7px;
+    padding: 22px 16px;
+    color: var(--madeira-2);
+    font-weight: 600;
+    font-size: 13.5px;
+    min-height: 108px;
+    transition: border-color 0.12s ease, color 0.12s ease;
+  }
+  .comanda-new-card:hover { border-color: var(--cobre); color: var(--cobre); }
+  .comanda-new-card svg { width: 22px; height: 22px; }
+
+  .venda-rapida-card {
+    border-radius: 12px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 7px;
+    padding: 22px 16px;
+    min-height: 108px;
+    background: var(--madeira);
+    color: var(--creme);
+    font-weight: 600;
+    font-size: 13.5px;
+    border: 1px solid var(--madeira);
+    transition: opacity 0.12s ease;
+  }
+  .venda-rapida-card:hover { opacity: 0.9; }
+  .venda-rapida-card svg { width: 22px; height: 22px; color: var(--cobre-claro); }
+  .venda-rapida-card span { font-size: 10.5px; font-weight: 500; opacity: 0.65; text-transform: none; }
+
+  .comanda-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 18px; gap: 12px; flex-wrap: wrap;
+  }
+  .btn-back {
+    display: flex; align-items: center; gap: 6px;
+    font-weight: 600; font-size: 12.5px; color: var(--madeira-2);
+    padding: 8px 4px;
+  }
+  .btn-back:hover { color: var(--cobre); }
+  .btn-back svg { width: 15px; height: 15px; }
+
+  .comanda-title-block { display: flex; align-items: center; gap: 12px; }
+  .comanda-title-block h2 { font-family: var(--font-display); font-size: 19px; font-weight: 600; color: var(--madeira); }
+  .comanda-title-block .comanda-mesa { margin-top: 0; }
+
+  .item-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 9px 0; border-bottom: 1px solid var(--creme-2); gap: 10px;
+  }
+  .item-row:last-child { border-bottom: none; }
+  .item-row-name { font-weight: 600; font-size: 13.5px; }
+  .item-row-price { font-size: 11.5px; color: var(--madeira-2); font-family: var(--font-mono); }
+  .item-row-total { font-family: var(--font-mono); font-weight: 700; font-size: 13.5px; min-width: 68px; text-align: right; }
+
+  .comanda-total-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 15px 16px; margin-top: 4px;
+    background: var(--madeira); color: var(--creme);
+    border-radius: 10px;
+  }
+  .comanda-total-bar .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--cobre-claro); font-weight: 700; }
+  .comanda-total-bar .value { font-family: var(--font-display); font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* ---------- Payment badges ---------- */
+  .pay-badge {
+    font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 5px;
+    display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+    text-transform: uppercase; letter-spacing: 0.02em;
+    background: var(--creme-2); color: var(--madeira-2);
+    border: 1px solid var(--linha);
+  }
+  .pay-badges-wrap { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; }
+
+  .method-btn {
+    flex: 1; min-width: 110px;
+    padding: 13px 10px;
+    border-radius: 9px;
+    border: 1px solid var(--linha);
+    background: #fff;
+    font-weight: 600; font-size: 12.5px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    color: var(--madeira-2);
+    transition: border-color 0.12s, color 0.12s;
+  }
+  .method-btn svg { width: 18px; height: 18px; }
+  .method-btn:hover { border-color: var(--cobre); }
+  .method-btn.selected { border-color: var(--madeira); background: var(--madeira); color: var(--creme); }
+
+  /* ---------- Toast ---------- */
+  .toast-wrap {
+    position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+    z-index: 100; display: flex; flex-direction: column; gap: 8px; align-items: center;
+  }
+  .toast {
+    background: var(--madeira); color: var(--creme);
+    padding: 11px 20px; border-radius: 9px;
+    font-weight: 600; font-size: 13px;
+    box-shadow: 0 8px 20px var(--sombra);
+    display: flex; align-items: center; gap: 8px;
+    animation: toast-in 0.2s ease;
+  }
+  .toast.venda { background: var(--verde); }
+  .toast.erro { background: var(--vermelho); }
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ---------- Modal ---------- */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(20,15,10,0.45);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200; padding: 20px; overflow-y: auto;
+  }
+  .modal {
+    background: #fff; border-radius: 14px; padding: 22px;
+    max-width: 420px; width: 100%;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.18);
+    margin: auto;
+    border: 1px solid var(--linha);
+  }
+  .modal.modal-lg { max-width: 500px; }
+  .modal h3 {
+    font-family: var(--font-display); font-size: 17px; font-weight: 600; color: var(--madeira); margin-bottom: 16px;
+  }
+  .modal-sub { font-size: 12.5px; color: var(--madeira-2); margin-top: -10px; margin-bottom: 4px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+
+  .relatorio-preview {
+    max-height: 340px;
+    overflow-y: auto;
+    background: var(--creme);
+    border: 1px solid var(--linha);
+    border-radius: 10px;
+    padding: 14px;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--texto-escuro);
+    margin-top: 10px;
+  }
+  .relatorio-preview::-webkit-scrollbar { width: 6px; }
+  .relatorio-preview::-webkit-scrollbar-thumb { background: var(--creme-2); border-radius: 10px; }
+
+  /* ---------- Impressão / PDF do relatório ---------- */
+  #relatorio-print-area { display: none; }
+  @media print {
+    body * { visibility: hidden; }
+    #relatorio-print-area, #relatorio-print-area * { visibility: visible; }
+    #relatorio-print-area {
+      display: block;
+      position: absolute;
+      inset: 0;
+      padding: 24px;
+    }
+    #relatorio-print-area h2 {
+      font-family: var(--font-display);
+      font-size: 20px;
+      color: var(--madeira);
+      margin-bottom: 2px;
+    }
+    #relatorio-print-area .print-sub {
+      font-size: 12px;
+      color: var(--madeira-2);
+      margin-bottom: 16px;
+    }
+    #relatorio-print-area pre {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #000;
+    }
+    @page { margin: 16mm; }
+  }
+
+  .split-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .split-row select { flex: 1.2; padding: 8px 10px; border-radius: 7px; border: 1px solid var(--linha); background: var(--creme); font-size: 12.5px; font-weight: 600; }
+  .split-row input { flex: 1; padding: 8px 10px; border-radius: 7px; border: 1px solid var(--linha); background: var(--creme); font-size: 12.5px; font-family: var(--font-mono); }
+  .split-remove { color: var(--vermelho); font-size: 17px; font-weight: 700; padding: 4px 8px; flex-shrink: 0; }
+
+  .pay-summary-row { display: flex; justify-content: space-between; font-size: 12.5px; padding: 5px 0; color: var(--madeira-2); font-weight: 600; }
+  .pay-summary-row.total { font-size: 14px; font-weight: 700; color: var(--madeira); border-top: 1px dashed var(--linha); padding-top: 9px; margin-top: 4px; }
+  .pay-summary-row .v { font-family: var(--font-mono); }
+  .pay-summary-row.negativo .v { color: var(--vermelho); }
+  .pay-summary-row.ok .v { color: var(--verde); }
+
+  .date-nav {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .date-nav input[type="date"] {
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--linha);
+    background: var(--creme);
+    font-size: 12.5px;
+    font-family: var(--font-mono);
+    color: var(--texto-escuro);
+    outline: none;
+  }
+  .date-nav input[type="date"]:focus { border-color: var(--cobre); }
+  .date-arrow {
+    width: 28px; height: 28px; border-radius: 7px;
+    background: var(--creme-2); color: var(--madeira);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 700; flex-shrink: 0;
+  }
+  .date-arrow:hover { background: var(--cobre-claro); color: #fff; }
+  .dashboard-header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap; margin-bottom: 16px;
+  }
+  .dashboard-header .titulo-data { text-transform: capitalize; }
+
+  .empty-app {
+    text-align: center; padding: 60px 20px;
+  }
+
+  /* scrollable card body */
+  .scroll-y { max-height: 420px; overflow-y: auto; }
+  .scroll-y::-webkit-scrollbar { width: 6px; }
+  .scroll-y::-webkit-scrollbar-thumb { background: var(--creme-2); border-radius: 10px; }
+
+  .footer-note {
+    text-align: center; font-size: 11px; color: var(--madeira-2); opacity: 0.55; margin-top: 30px; font-weight: 500;
+  }
+
+  .mini-cart-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 9px 0; border-bottom: 1px solid var(--creme-2); gap: 10px;
+  }
+  .mini-cart-row:last-child { border-bottom: none; }
+
+  .step-tabs { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-size: 12px; font-weight: 600; color: var(--madeira-2); opacity: 0.6; }
+  .step-tabs .step-dot { width: 20px; height: 20px; border-radius: 50%; background: var(--creme-2); color: var(--madeira-2); display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 10.5px; }
+  .step-tabs .active-step { color: var(--madeira); opacity: 1; }
+  .step-tabs .active-step .step-dot { background: var(--madeira); color: var(--creme); }
+  .step-tabs .sep { width: 16px; height: 1px; background: var(--linha); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+
+<!-- Firebase (SDK "compat" — funciona com script clássico, sem import/module) -->
+<script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAbLfJ19XN4K77l0kB35d62tYPs61A-BEs",
+    authDomain: "sistema-d8fdc.firebaseapp.com",
+    projectId: "sistema-d8fdc",
+    storageBucket: "sistema-d8fdc.firebasestorage.app",
+    messagingSenderId: "328945727290",
+    appId: "1:328945727290:web:0093216a00914fb879c203"
+  };
+  firebase.initializeApp(firebaseConfig);
+  window.__db = firebase.firestore();
+</script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useRef } = React;
+
+const METODOS = {
+  dinheiro: { label: 'Dinheiro', cls: 'dinheiro', icon: 'cash' },
+  pix:      { label: 'Pix',      cls: 'pix',      icon: 'pix' },
+  debito:   { label: 'Débito',   cls: 'debito',   icon: 'card' },
+  credito:  { label: 'Crédito',  cls: 'credito',  icon: 'card' },
+};
+
+const seedProducts = [
+  { id: 'p1', nome: 'Cachaça Prata 750ml', preco: 25, custo: 12, qtd: 40, minimo: 8 },
+  { id: 'p2', nome: 'Cachaça Ouro 750ml', preco: 32, custo: 16, qtd: 30, minimo: 8 },
+  { id: 'p3', nome: 'Dose Avulsa', preco: 8, custo: 2.5, qtd: 200, minimo: 30 },
+  { id: 'p4', nome: 'Caipirinha', preco: 15, custo: 5, qtd: 999, minimo: 0 },
+  { id: 'p5', nome: 'Kit Presente 2un', preco: 60, custo: 28, qtd: 15, minimo: 3 },
+  { id: 'p6', nome: 'Copo Personalizado', preco: 12, custo: 4, qtd: 50, minimo: 10 },
+];
+
+const DB_COLLECTION = 'barril';
+const DB_DOC = 'estado';
+
+function normalizeState(data) {
+  return {
+    products: (data && data.products) || seedProducts,
+    comandas: (data && data.comandas) || [],
+    vendas: (data && data.vendas) || [],
+    caixaAtual: (data && data.caixaAtual) || null,
+    caixasFechados: (data && data.caixasFechados) || [],
+    rev: (data && data.rev) || 0,
+  };
+}
+
+function docRef() {
+  return window.__db.collection(DB_COLLECTION).doc(DB_DOC);
+}
+
+function formatBRL(v) {
+  return (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+// Para produto normal, retorna o estoque direto. Para kit (produto composto),
+// calcula quantos kits dá pra montar com o estoque atual de cada componente.
+function estoqueDisponivel(produto, products) {
+  if (!produto) return 0;
+  if (produto.tipo !== 'kit') return produto.qtd;
+  if (!produto.itens || produto.itens.length === 0) return 0;
+  return Math.min(...produto.itens.map(c => {
+    const compProd = products.find(p => p.id === c.productId);
+    if (!compProd) return 0;
+    return Math.floor((compProd.qtd || 0) / (c.qtd || 1));
+  }));
+}
+
+function formatTime(ts) {
+  return new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function todayKey(ts) {
+  return new Date(ts).toDateString();
+}
+
+function dateToInputValue(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function inputValueToKey(value) {
+  const [y, m, d] = value.split('-').map(Number);
+  return new Date(y, m - 1, d).toDateString();
+}
+
+function shiftDate(value, delta) {
+  const [y, m, d] = value.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + delta);
+  return dateToInputValue(date);
+}
+
+function formatDataLabel(value) {
+  const [y, m, d] = value.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  return date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+}
+
+function formatDataCurta(value) {
+  const [y, m, d] = value.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+}
+
+function gerarTextoRelatorio({ dataSelecionada, faturamento, lucro, itens, ticketMedio, produtoTop, vendas, porMetodo, estoqueBaixo, caixasFechados }) {
+  const linha = '────────────────────────';
+  let t = '';
+  t += `*RELATÓRIO DO DIA — BARRIL*\n`;
+  t += `${formatDataLabel(dataSelecionada)}\n`;
+  t += `${linha}\n\n`;
+
+  t += `*RESUMO*\n`;
+  t += `Faturamento: ${formatBRL(faturamento)}\n`;
+  t += `Lucro estimado: ${formatBRL(lucro)}\n`;
+  t += `Itens vendidos: ${itens}\n`;
+  t += `Comandas fechadas: ${vendas.length}\n`;
+  t += `Ticket médio: ${formatBRL(ticketMedio)}\n`;
+  if (produtoTop) t += `Produto mais vendido: ${produtoTop.nome} (${produtoTop.qtd} un)\n`;
+  t += `\n`;
+
+  t += `*POR FORMA DE PAGAMENTO*\n`;
+  Object.entries(METODOS).forEach(([key, m]) => {
+    if (porMetodo[key] > 0) t += `${m.label}: ${formatBRL(porMetodo[key])}\n`;
+  });
+  t += `\n`;
+
+  if (caixasFechados && caixasFechados.length > 0) {
+    t += `*CAIXA*\n`;
+    caixasFechados.forEach(c => {
+      const status = Math.abs(c.diferenca) < 0.01 ? 'confere' : (c.diferenca > 0 ? `sobra ${formatBRL(c.diferenca)}` : `falta ${formatBRL(Math.abs(c.diferenca))}`);
+      t += `${formatTime(c.abertoEm)}–${formatTime(c.fechadoEm)} · troco ${formatBRL(c.trocoInicial)}`;
+      if (c.totalAjustes) {
+        const partes = Object.entries(METODOS)
+          .filter(([key]) => c.ajustesPorMetodo && c.ajustesPorMetodo[key] > 0)
+          .map(([key, m]) => `${m.label} ${formatBRL(c.ajustesPorMetodo[key])}`);
+        t += ` · ajustes ${formatBRL(c.totalAjustes)}${partes.length ? ` (${partes.join(', ')})` : ''}`;
+      }
+      t += ` · esperado ${formatBRL(c.esperado)} · ${status}\n`;
+    });
+    t += `\n`;
+  }
+
+  t += `*VENDAS (${vendas.length})*\n`;
+  if (vendas.length === 0) {
+    t += `Nenhuma venda registrada.\n`;
+  } else {
+    vendas.forEach(s => {
+      t += `\n${formatTime(s.ts)} — ${s.nome}${s.mesa ? ` (${s.mesa})` : ''}\n`;
+      s.itens.forEach(it => { t += `  ${it.qtd}× ${it.nome}\n`; });
+      if (s.desconto > 0) t += `  Desconto: -${formatBRL(s.desconto)}\n`;
+      t += `  Total: ${formatBRL(s.total)} · ${s.pagamentos.map(p => METODOS[p.metodo].label).join(' + ')}\n`;
+      if (s.observacao) t += `  Obs: "${s.observacao}"\n`;
+    });
+    t += `\n`;
+  }
+
+  if (estoqueBaixo && estoqueBaixo.length > 0) {
+    t += `*ESTOQUE BAIXO*\n`;
+    estoqueBaixo.forEach(p => { t += `${p.nome}: ${p.qtd} un (mín. ${p.minimo})\n`; });
+    t += `\n`;
+  }
+
+  t += `${linha}\n`;
+  t += `Gerado em ${new Date().toLocaleString('pt-BR')}`;
+  return t;
+}
+
+function gerarTextoRelatorioPeriodo({ inicio, fim, faturamento, lucro, itens, numVendas, ticketMedio, produtoTop, porMetodo, porDia, topProdutos }) {
+  const linha = '────────────────────────';
+  let t = '';
+  t += `*RELATÓRIO DO PERÍODO — BARRIL*\n`;
+  t += `${formatDataLabel(inicio)} até ${formatDataLabel(fim)}\n`;
+  t += `${linha}\n\n`;
+
+  t += `*RESUMO DO PERÍODO*\n`;
+  t += `Faturamento total: ${formatBRL(faturamento)}\n`;
+  t += `Lucro estimado: ${formatBRL(lucro)}\n`;
+  t += `Itens vendidos: ${itens}\n`;
+  t += `Vendas/comandas fechadas: ${numVendas}\n`;
+  t += `Ticket médio: ${formatBRL(ticketMedio)}\n`;
+  if (produtoTop) t += `Produto mais vendido: ${produtoTop.nome} (${produtoTop.qtd} un)\n`;
+  t += `\n`;
+
+  t += `*POR FORMA DE PAGAMENTO*\n`;
+  Object.entries(METODOS).forEach(([key, m]) => {
+    if (porMetodo[key] > 0) t += `${m.label}: ${formatBRL(porMetodo[key])}\n`;
+  });
+  t += `\n`;
+
+  if (topProdutos && topProdutos.length > 0) {
+    t += `*MAIS VENDIDOS*\n`;
+    topProdutos.forEach(p => { t += `${p.nome}: ${p.qtd} un\n`; });
+    t += `\n`;
+  }
+
+  t += `*POR DIA*\n`;
+  porDia.forEach(d => {
+    t += `${formatDataCurta(d.data)}: ${formatBRL(d.faturamento)} · ${d.numVendas} ${d.numVendas === 1 ? 'venda' : 'vendas'}\n`;
+  });
+  t += `\n`;
+
+  t += `${linha}\n`;
+  t += `Gerado em ${new Date().toLocaleString('pt-BR')}`;
+  return t;
+}
+
+function uid() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+function comandaTotal(comanda) {
+  return comanda.itens.reduce((a, it) => a + it.preco * it.qtd, 0);
+}
+
+function IconCash() {
+  return <svg viewBox="0 0 24 24" fill="none"><rect x="2.5" y="6" width="19" height="12" rx="2" stroke="currentColor" strokeWidth="1.6"/><circle cx="12" cy="12" r="2.6" stroke="currentColor" strokeWidth="1.6"/><path d="M5.5 9V9M18.5 15v0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>;
+}
+function IconPix() {
+  return <svg viewBox="0 0 24 24" fill="none"><path d="M9.2 5.3 5.3 9.2a2.4 2.4 0 0 0 0 3.4l3.9 3.9a2.4 2.4 0 0 0 3.4 0l3.9-3.9a2.4 2.4 0 0 0 0-3.4l-3.9-3.9a2.4 2.4 0 0 0-3.4 0Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/><path d="M4 12h1.8M18.2 12H20" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>;
+}
+function IconCard() {
+  return <svg viewBox="0 0 24 24" fill="none"><rect x="2.5" y="5.5" width="19" height="13" rx="2.2" stroke="currentColor" strokeWidth="1.6"/><path d="M2.5 9.8h19" stroke="currentColor" strokeWidth="1.6"/><path d="M5.5 14.5h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>;
+}
+function IconEdit() {
+  return <svg viewBox="0 0 24 24" fill="none"><path d="M14.5 5.5 18.5 9.5M4 20l.9-3.9L15.6 5.4a1.6 1.6 0 0 1 2.3 0l1.7 1.7a1.6 1.6 0 0 1 0 2.3L8.9 19.1 4 20Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/></svg>;
+}
+const METODO_ICON = { cash: IconCash, pix: IconPix, card: IconCard };
+
+function App() {
+  const [state, setState] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [dbError, setDbError] = useState(null);
+  const stateRef = useRef(null);
+  const firstWriteSkipped = useRef(false);
+  const writingRef = useRef(false); // true enquanto há uma gravação local pendente/em andamento
+  const revRef = useRef(0); // maior revisão já conhecida (local ou remota)
+  const skipNextWrite = useRef(false); // true quando a próxima mudança de state veio do Firestore, não do usuário
+  const docInitedRef = useRef(false); // true assim que já vimos o documento existir ao menos uma vez nesta sessão
+  const [tab, setTab] = useState('comandas');
+  const [selectedComanda, setSelectedComanda] = useState(null);
+  const [toasts, setToasts] = useState([]);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [confirmCancelComanda, setConfirmCancelComanda] = useState(null);
+  const [confirmReabrirCaixa, setConfirmReabrirCaixa] = useState(null);
+  const [showNovaComanda, setShowNovaComanda] = useState(false);
+  const [showPagamento, setShowPagamento] = useState(false);
+  const [showVendaRapida, setShowVendaRapida] = useState(false);
+  const [showAbrirCaixa, setShowAbrirCaixa] = useState(false);
+  const [showFecharCaixa, setShowFecharCaixa] = useState(false);
+  const [showEditarCaixa, setShowEditarCaixa] = useState(false);
+  const [showRelatorioPeriodo, setShowRelatorioPeriodo] = useState(false);
+  const [dataSelecionada, setDataSelecionada] = useState(() => dateToInputValue(new Date()));
+
+  // Escuta o documento no Firestore em tempo real (sincroniza entre dispositivos)
+  useEffect(() => {
+    const ref = docRef();
+    const unsub = ref.onSnapshot(
+      snap => {
+        if (!snap.exists) {
+          // Nunca recria o documento a partir de um snapshot vindo do
+          // cache local (rede instável, reconexão, aba em background
+          // voltando etc.) — isso apagava o caixa aberto, comandas e
+          // vendas silenciosamente. Só cria do zero se for realmente a
+          // primeira vez desta sessão E a confirmação vier do servidor.
+          if (snap.metadata.fromCache) { return; }
+          if (docInitedRef.current) { return; }
+          docInitedRef.current = true;
+          ref.set(normalizeState(null)).catch(e => setDbError(e.message));
+          return;
+        }
+        docInitedRef.current = true;
+        const data = normalizeState(snap.data());
+        // Se a revisão recebida for mais antiga que a última que já
+        // conhecemos, ignoramos: é um dado atrasado (rede lenta, outro
+        // dispositivo com cache velho, etc.) e não pode desfazer uma ação
+        // mais recente que já fizemos aqui (era isso que fazia o caixa
+        // fechar sozinho logo depois de abrir).
+        if (data.rev < revRef.current) { setLoading(false); return; }
+        revRef.current = data.rev;
+        // Enquanto uma alteração local ainda está sendo gravada no banco,
+        // não substituímos o estado local pelo eco da própria gravação.
+        if (writingRef.current) { setLoading(false); return; }
+        if (JSON.stringify(data) !== JSON.stringify(stateRef.current)) {
+          skipNextWrite.current = true;
+          stateRef.current = data;
+          setState(data);
+        }
+        setLoading(false);
+      },
+      err => { setDbError(err.message); setLoading(false); }
+    );
+    return () => unsub();
+  }, []);
+
+  // Grava no Firestore sempre que o estado local muda (com pequeno atraso)
+  useEffect(() => {
+    if (!state) return;
+    stateRef.current = state;
+    if (!firstWriteSkipped.current) { firstWriteSkipped.current = true; skipNextWrite.current = false; return; }
+    // Mudança veio de um snapshot remoto (não do usuário): não regravar.
+    if (skipNextWrite.current) { skipNextWrite.current = false; return; }
+    writingRef.current = true;
+    const nextRev = revRef.current + 1;
+    const t = setTimeout(() => {
+      revRef.current = nextRev;
+      docRef().set({ ...state, rev: nextRev })
+        .catch(e => setDbError(e.message))
+        .finally(() => { writingRef.current = false; });
+    }, 350);
+    return () => clearTimeout(t);
+  }, [state]);
+
+  const pushToast = (msg, type = 'default') => {
+    const id = uid();
+    setToasts(t => [...t, { id, msg, type }]);
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 2800);
+  };
+
+  // ---------- Caixa ----------
+  const abrirCaixa = (trocoInicial) => {
+    setState(prev => ({
+      ...prev,
+      caixaAtual: { id: uid(), trocoInicial: trocoInicial || 0, abertoEm: Date.now(), ajustes: [] },
+    }));
+    setShowAbrirCaixa(false);
+    pushToast('Caixa aberto', 'venda');
+  };
+
+  const adicionarAjusteCaixa = (valor, metodo, motivo) => {
+    setState(prev => {
+      if (!prev.caixaAtual) return prev;
+      const ajuste = { id: uid(), valor: valor || 0, metodo: metodo || 'dinheiro', motivo: motivo || '', ts: Date.now() };
+      return {
+        ...prev,
+        caixaAtual: { ...prev.caixaAtual, ajustes: [...(prev.caixaAtual.ajustes || []), ajuste] },
+      };
+    });
+    pushToast('Valor lançado no caixa', 'venda');
+  };
+
+  const removerAjusteCaixa = (ajusteId) => {
+    setState(prev => {
+      if (!prev.caixaAtual) return prev;
+      return {
+        ...prev,
+        caixaAtual: { ...prev.caixaAtual, ajustes: (prev.caixaAtual.ajustes || []).filter(a => a.id !== ajusteId) },
+      };
+    });
+  };
+
+  const fecharCaixa = (contado) => {
+    setState(prev => {
+      if (!prev.caixaAtual) return prev;
+      const vendasDoCaixa = prev.vendas.filter(v => v.caixaId === prev.caixaAtual.id);
+      const porMetodo = { dinheiro: 0, pix: 0, debito: 0, credito: 0 };
+      vendasDoCaixa.forEach(v => v.pagamentos.forEach(p => { porMetodo[p.metodo] = (porMetodo[p.metodo] || 0) + p.valor; }));
+      const totalVendas = vendasDoCaixa.reduce((a, v) => a + v.total, 0);
+      const ajustes = prev.caixaAtual.ajustes || [];
+      const ajustesPorMetodo = { dinheiro: 0, pix: 0, debito: 0, credito: 0 };
+      ajustes.forEach(j => { ajustesPorMetodo[j.metodo] = (ajustesPorMetodo[j.metodo] || 0) + j.valor; });
+      const totalAjustes = ajustes.reduce((a, j) => a + j.valor, 0);
+      const esperado = prev.caixaAtual.trocoInicial + porMetodo.dinheiro + ajustesPorMetodo.dinheiro;
+      const registro = {
+        id: prev.caixaAtual.id,
+        trocoInicial: prev.caixaAtual.trocoInicial,
+        abertoEm: prev.caixaAtual.abertoEm,
+        fechadoEm: Date.now(),
+        vendas: vendasDoCaixa.length,
+        totalVendas,
+        porMetodo,
+        ajustes,
+        ajustesPorMetodo,
+        totalAjustes,
+        esperado,
+        contado: contado || 0,
+        diferenca: (contado || 0) - esperado,
+      };
+      return {
+        ...prev,
+        caixaAtual: null,
+        caixasFechados: [registro, ...prev.caixasFechados],
+      };
+    });
+    setShowFecharCaixa(false);
+    pushToast('Caixa fechado', 'default');
+  };
+
+  const reabrirCaixa = (caixaId) => {
+    if (state.caixaAtual) {
+      pushToast('Feche o caixa atual antes de reabrir outro', 'erro');
+      setConfirmReabrirCaixa(null);
+      return;
+    }
+    setState(prev => {
+      if (prev.caixaAtual) return prev;
+      const caixa = prev.caixasFechados.find(c => c.id === caixaId);
+      if (!caixa) return prev;
+      return {
+        ...prev,
+        caixaAtual: { id: caixa.id, trocoInicial: caixa.trocoInicial, abertoEm: caixa.abertoEm, ajustes: caixa.ajustes || [] },
+        caixasFechados: prev.caixasFechados.filter(c => c.id !== caixaId),
+      };
+    });
+    setConfirmReabrirCaixa(null);
+    pushToast('Caixa reaberto', 'venda');
+  };
+
+  // ---------- Comandas ----------
+  const criarComanda = (nome, mesa) => {
+    const comanda = { id: uid(), nome: nome || 'Cliente', mesa: mesa || '', itens: [], criadoEm: Date.now() };
+    setState(prev => ({ ...prev, comandas: [comanda, ...prev.comandas] }));
+    setShowNovaComanda(false);
+    setSelectedComanda(comanda.id);
+    pushToast('Comanda aberta', 'venda');
+  };
+
+  const adicionarItem = (comandaId, productId) => {
+    setState(prev => {
+      const prod = prev.products.find(p => p.id === productId);
+      if (!prod) return prev;
+
+      if (prod.tipo === 'kit') {
+        const disponivel = estoqueDisponivel(prod, prev.products);
+        if (disponivel < 1) { pushToast('Estoque insuficiente para montar o kit', 'erro'); return prev; }
+        return {
+          ...prev,
+          products: prev.products.map(p => {
+            const comp = prod.itens.find(c => c.productId === p.id);
+            return comp ? { ...p, qtd: p.qtd - comp.qtd } : p;
+          }),
+          comandas: prev.comandas.map(c => {
+            if (c.id !== comandaId) return c;
+            const existing = c.itens.find(it => it.productId === productId);
+            if (existing) {
+              return { ...c, itens: c.itens.map(it => it.productId === productId ? { ...it, qtd: it.qtd + 1 } : it) };
+            }
+            return { ...c, itens: [...c.itens, { id: uid(), productId, nome: prod.nome, preco: prod.preco, custo: prod.custo, qtd: 1, kit: true, componentes: prod.itens }] };
+          }),
+        };
+      }
+
+      if (prod.qtd < 1) return prev;
+      return {
+        ...prev,
+        products: prev.products.map(p => p.id === productId ? { ...p, qtd: p.qtd - 1 } : p),
+        comandas: prev.comandas.map(c => {
+          if (c.id !== comandaId) return c;
+          const existing = c.itens.find(it => it.productId === productId);
+          if (existing) {
+            return { ...c, itens: c.itens.map(it => it.productId === productId ? { ...it, qtd: it.qtd + 1 } : it) };
+          }
+          return { ...c, itens: [...c.itens, { id: uid(), productId, nome: prod.nome, preco: prod.preco, custo: prod.custo, qtd: 1 }] };
+        }),
+      };
+    });
+  };
+
+  const ajustarItem = (comandaId, itemId, delta) => {
+    setState(prev => {
+      const comanda = prev.comandas.find(c => c.id === comandaId);
+      if (!comanda) return prev;
+      const item = comanda.itens.find(it => it.id === itemId);
+      if (!item) return prev;
+
+      if (item.kit) {
+        if (delta > 0) {
+          const faltando = item.componentes.some(c => {
+            const p = prev.products.find(pp => pp.id === c.productId);
+            return !p || p.qtd < c.qtd * delta;
+          });
+          if (faltando) { pushToast('Estoque insuficiente para mais um kit', 'erro'); return prev; }
+        }
+        const novaQtd = item.qtd + delta;
+        return {
+          ...prev,
+          products: prev.products.map(p => {
+            const comp = item.componentes.find(c => c.productId === p.id);
+            return comp ? { ...p, qtd: p.qtd - comp.qtd * delta } : p;
+          }),
+          comandas: prev.comandas.map(c => {
+            if (c.id !== comandaId) return c;
+            if (novaQtd <= 0) return { ...c, itens: c.itens.filter(it => it.id !== itemId) };
+            return { ...c, itens: c.itens.map(it => it.id === itemId ? { ...it, qtd: novaQtd } : it) };
+          }),
+        };
+      }
+
+      const prod = prev.products.find(p => p.id === item.productId);
+      if (delta > 0 && prod && prod.qtd < delta) { pushToast('Estoque insuficiente', 'erro'); return prev; }
+      const novaQtd = item.qtd + delta;
+      return {
+        ...prev,
+        products: prev.products.map(p => p.id === item.productId ? { ...p, qtd: p.qtd - delta } : p),
+        comandas: prev.comandas.map(c => {
+          if (c.id !== comandaId) return c;
+          if (novaQtd <= 0) return { ...c, itens: c.itens.filter(it => it.id !== itemId) };
+          return { ...c, itens: c.itens.map(it => it.id === itemId ? { ...it, qtd: novaQtd } : it) };
+        }),
+      };
+    });
+  };
+
+  const removerItem = (comandaId, itemId) => {
+    setState(prev => {
+      const comanda = prev.comandas.find(c => c.id === comandaId);
+      const item = comanda && comanda.itens.find(it => it.id === itemId);
+      if (!item) return prev;
+      const novosProducts = item.kit
+        ? prev.products.map(p => {
+            const comp = item.componentes.find(c => c.productId === p.id);
+            return comp ? { ...p, qtd: p.qtd + comp.qtd * item.qtd } : p;
+          })
+        : prev.products.map(p => p.id === item.productId ? { ...p, qtd: p.qtd + item.qtd } : p);
+      return {
+        ...prev,
+        products: novosProducts,
+        comandas: prev.comandas.map(c => c.id === comandaId ? { ...c, itens: c.itens.filter(it => it.id !== itemId) } : c),
+      };
+    });
+  };
+
+  const cancelarComanda = (comandaId) => {
+    setState(prev => {
+      const comanda = prev.comandas.find(c => c.id === comandaId);
+      if (!comanda) return prev;
+      const devolucoes = {};
+      comanda.itens.forEach(it => {
+        if (it.kit) {
+          it.componentes.forEach(c => { devolucoes[c.productId] = (devolucoes[c.productId] || 0) + c.qtd * it.qtd; });
+        } else {
+          devolucoes[it.productId] = (devolucoes[it.productId] || 0) + it.qtd;
+        }
+      });
+      return {
+        ...prev,
+        products: prev.products.map(p => devolucoes[p.id] ? { ...p, qtd: p.qtd + devolucoes[p.id] } : p),
+        comandas: prev.comandas.filter(c => c.id !== comandaId),
+      };
+    });
+    setConfirmCancelComanda(null);
+    setSelectedComanda(null);
+    pushToast('Comanda cancelada — estoque devolvido', 'default');
+  };
+
+  const fecharComanda = (comandaId, pagamentos, desconto = 0, observacao = '') => {
+    setState(prev => {
+      const comanda = prev.comandas.find(c => c.id === comandaId);
+      if (!comanda) return prev;
+      const subtotal = comandaTotal(comanda);
+      const venda = {
+        id: uid(), comandaId: comanda.id, nome: comanda.nome, mesa: comanda.mesa,
+        itens: comanda.itens, subtotal, desconto: desconto || 0, observacao: observacao || '',
+        total: Math.max(0, subtotal - (desconto || 0)), pagamentos, ts: Date.now(),
+        caixaId: prev.caixaAtual ? prev.caixaAtual.id : null,
+      };
+      return {
+        ...prev,
+        comandas: prev.comandas.filter(c => c.id !== comandaId),
+        vendas: [venda, ...prev.vendas],
+      };
+    });
+    setShowPagamento(false);
+    setSelectedComanda(null);
+    pushToast('Comanda fechada e paga', 'venda');
+  };
+
+  const registrarVendaRapida = (itens, pagamentos, desconto = 0, observacao = '') => {
+    setState(prev => {
+      const subtotal = itens.reduce((a, it) => a + it.preco * it.qtd, 0);
+      const total = Math.max(0, subtotal - (desconto || 0));
+      const venda = {
+        id: uid(), comandaId: null, nome: 'Venda avulsa', mesa: '', itens, subtotal, desconto: desconto || 0, observacao: observacao || '', total, pagamentos, ts: Date.now(),
+        caixaId: prev.caixaAtual ? prev.caixaAtual.id : null,
+      };
+      const consumo = {};
+      itens.forEach(it => {
+        if (it.kit) {
+          it.componentes.forEach(c => { consumo[c.productId] = (consumo[c.productId] || 0) + c.qtd * it.qtd; });
+        } else {
+          consumo[it.productId] = (consumo[it.productId] || 0) + it.qtd;
+        }
+      });
+      return {
+        ...prev,
+        products: prev.products.map(p => consumo[p.id] ? { ...p, qtd: Math.max(0, p.qtd - consumo[p.id]) } : p),
+        vendas: [venda, ...prev.vendas],
+      };
+    });
+    setShowVendaRapida(false);
+    pushToast('Venda registrada e paga', 'venda');
+  };
+
+  const desfazerVenda = (vendaId) => {
+    setState(prev => {
+      const venda = prev.vendas.find(s => s.id === vendaId);
+      if (!venda) return prev;
+      const devolucoes = {};
+      venda.itens.forEach(it => {
+        if (it.kit) {
+          it.componentes.forEach(c => { devolucoes[c.productId] = (devolucoes[c.productId] || 0) + c.qtd * it.qtd; });
+        } else {
+          devolucoes[it.productId] = (devolucoes[it.productId] || 0) + it.qtd;
+        }
+      });
+      return {
+        ...prev,
+        products: prev.products.map(p => devolucoes[p.id] ? { ...p, qtd: p.qtd + devolucoes[p.id] } : p),
+        vendas: prev.vendas.filter(s => s.id !== vendaId),
+      };
+    });
+    pushToast('Venda desfeita — estoque devolvido', 'default');
+  };
+
+  // ---------- Estoque ----------
+  const addProduct = (data) => {
+    setState(prev => ({ ...prev, products: [...prev.products, { id: uid(), ...data }] }));
+    pushToast('Produto adicionado', 'default');
+  };
+
+  const updateStock = (productId, delta) => {
+    setState(prev => ({ ...prev, products: prev.products.map(p => p.id === productId ? { ...p, qtd: Math.max(0, p.qtd + delta) } : p) }));
+  };
+
+  const editProduct = (productId, data) => {
+    setState(prev => ({ ...prev, products: prev.products.map(p => p.id === productId ? { ...p, ...data } : p) }));
+    pushToast('Produto atualizado', 'default');
+  };
+
+  const deleteProduct = (productId) => {
+    setState(prev => ({ ...prev, products: prev.products.filter(p => p.id !== productId) }));
+    setConfirmDelete(null);
+    pushToast('Produto removido', 'default');
+  };
+
+  const now = Date.now();
+  const safeState = state || { products: [], comandas: [], vendas: [] };
+  const vendasDoDia = useMemo(() => safeState.vendas.filter(s => todayKey(s.ts) === inputValueToKey(dataSelecionada)), [safeState.vendas, dataSelecionada]);
+  const faturamentoDoDia = useMemo(() => vendasDoDia.reduce((a, s) => a + s.total, 0), [vendasDoDia]);
+  const lucroDoDia = useMemo(() => vendasDoDia.reduce((a, s) => a + s.itens.reduce((x, it) => x + (it.preco - it.custo) * it.qtd, 0) - (s.desconto || 0), 0), [vendasDoDia]);
+  const itensVendidosDoDia = useMemo(() => vendasDoDia.reduce((a, s) => a + s.itens.reduce((x, it) => x + it.qtd, 0), 0), [vendasDoDia]);
+  const ticketMedio = vendasDoDia.length ? faturamentoDoDia / vendasDoDia.length : 0;
+
+  const porMetodo = useMemo(() => {
+    const map = { dinheiro: 0, pix: 0, debito: 0, credito: 0 };
+    vendasDoDia.forEach(s => s.pagamentos.forEach(p => { map[p.metodo] = (map[p.metodo] || 0) + p.valor; }));
+    return map;
+  }, [vendasDoDia]);
+
+  const produtoTop = useMemo(() => {
+    const map = {};
+    vendasDoDia.forEach(s => s.itens.forEach(it => { map[it.nome] = (map[it.nome] || 0) + it.qtd; }));
+    const arr = Object.entries(map).sort((a, b) => b[1] - a[1]);
+    return arr.length ? arr[0] : null;
+  }, [vendasDoDia]);
+
+  const estoqueBaixo = safeState.products.filter(p => p.tipo !== 'kit' && p.qtd <= p.minimo);
+  const valorEstoque = safeState.products.reduce((a, p) => a + (p.tipo === 'kit' ? 0 : p.qtd * p.custo), 0);
+  const comandaAtual = selectedComanda ? safeState.comandas.find(c => c.id === selectedComanda) : null;
+
+  if (loading) {
+    return (
+      <div className="app">
+        <div className="empty-app">
+          <div className="empty-state">
+            <p>Conectando ao banco de dados…</p>
+            <span>Carregando comandas, vendas e estoque em tempo real</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (dbError) {
+    return (
+      <div className="app">
+        <div className="empty-app">
+          <div className="empty-state">
+            <p style={{ color: 'var(--vermelho)' }}>Não foi possível conectar ao banco de dados</p>
+            <span>{dbError}. Verifique as regras de segurança do Firestore no console do Firebase.</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="app">
+      <div className="topbar">
+        <div className="brand">
+          <div className="brand-mark">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M6 4h12l1.4 8L18 20H6l-1.4-8L6 4Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+              <path d="M4.6 8h14.8M4.9 16h14.2" stroke="currentColor" strokeWidth="1.6"/>
+              <path d="M9 4c-.9 2.7-.9 5.3 0 8s.9 5.3 0 8M15 4c.9 2.7.9 5.3 0 8s-.9 5.3 0 8" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" opacity="0.7"/>
+            </svg>
+          </div>
+          <div className="brand-text">
+            <h1>Barril</h1>
+            <p>Exporcachaça · Comandas & Caixa</p>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            className={`caixa-pill ${state.caixaAtual ? 'aberto' : 'fechado'}`}
+            onClick={() => state.caixaAtual ? setShowFecharCaixa(true) : setShowAbrirCaixa(true)}
+          >
+            <span className="caixa-dot"></span>
+            {state.caixaAtual ? (
+              <span>Caixa aberto · desde {formatTime(state.caixaAtual.abertoEm)}</span>
+            ) : (
+              <span>Caixa fechado</span>
+            )}
+          </button>
+          {state.caixaAtual && (
+            <button className="caixa-edit-btn" title="Editar caixa (lançar valor sem produto)" onClick={() => setShowEditarCaixa(true)}>
+              <IconEdit />
+            </button>
+          )}
+          <Clock />
+        </div>
+      </div>
+
+      <div className="tabs">
+        <button className={`tab ${tab === 'comandas' ? 'active' : ''}`} onClick={() => { setTab('comandas'); setSelectedComanda(null); }}>
+          <svg viewBox="0 0 24 24" fill="none"><path d="M6 3h12v18l-3-2-2 2-2-2-2 2-2-2-3 2V3Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/><path d="M9 8h6M9 12h6M9 16h3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
+          Comandas
+          {state.comandas.length > 0 && <span className="tab-badge">{state.comandas.length}</span>}
+        </button>
+        <button className={`tab ${tab === 'dashboard' ? 'active' : ''}`} onClick={() => setTab('dashboard')}>
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 20V4M4 20h16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/><path d="M7.5 16V11M12 16V7M16.5 16v-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
+          Painel
+        </button>
+        <button className={`tab ${tab === 'estoque' ? 'active' : ''}`} onClick={() => setTab('estoque')}>
+          <svg viewBox="0 0 24 24" fill="none"><path d="M3.5 7.5 12 3l8.5 4.5L12 12 3.5 7.5Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/><path d="M3.5 7.5V16L12 20.5m0-8.5V20.5m8.5-13v8.5L12 20.5" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/></svg>
+          Estoque
+        </button>
+      </div>
+
+      {tab === 'comandas' && !comandaAtual && (
+        <TelaComandasLista
+          comandas={state.comandas}
+          onAbrir={(id) => setSelectedComanda(id)}
+          onNova={() => setShowNovaComanda(true)}
+          onVendaRapida={() => {
+            if (!state.caixaAtual) { pushToast('Abra o caixa antes de vender', 'erro'); setShowAbrirCaixa(true); return; }
+            setShowVendaRapida(true);
+          }}
+        />
+      )}
+
+      {tab === 'comandas' && comandaAtual && (
+        <TelaComandaDetalhe
+          comanda={comandaAtual}
+          products={state.products}
+          onVoltar={() => setSelectedComanda(null)}
+          onAdicionarItem={(pid) => adicionarItem(comandaAtual.id, pid)}
+          onAjustarItem={(iid, d) => ajustarItem(comandaAtual.id, iid, d)}
+          onRemoverItem={(iid) => removerItem(comandaAtual.id, iid)}
+          onCancelar={() => setConfirmCancelComanda(comandaAtual.id)}
+          onFechar={() => {
+            if (!state.caixaAtual) { pushToast('Abra o caixa antes de receber pagamentos', 'erro'); setShowAbrirCaixa(true); return; }
+            setShowPagamento(true);
+          }}
+        />
+      )}
+
+      {tab === 'dashboard' && (
+        <TelaDashboard
+          faturamento={faturamentoDoDia}
+          lucro={lucroDoDia}
+          itens={itensVendidosDoDia}
+          ticketMedio={ticketMedio}
+          produtoTop={produtoTop}
+          vendas={vendasDoDia}
+          porMetodo={porMetodo}
+          comandasAbertas={state.comandas.length}
+          estoqueBaixo={estoqueBaixo}
+          valorEstoque={valorEstoque}
+          onDesfazer={desfazerVenda}
+          dataSelecionada={dataSelecionada}
+          onMudarData={setDataSelecionada}
+          caixasFechados={state.caixasFechados}
+          caixaAtual={state.caixaAtual}
+          onReabrirCaixa={setConfirmReabrirCaixa}
+          onVerPeriodo={() => setShowRelatorioPeriodo(true)}
+        />
+      )}
+
+      {tab === 'estoque' && (
+        <TelaEstoque
+          products={state.products}
+          onUpdateStock={updateStock}
+          onAddProduct={addProduct}
+          onEditProduct={editProduct}
+          onDelete={(id) => setConfirmDelete(id)}
+        />
+      )}
+
+      <div className="footer-note">Sincronizado em tempo real com o banco de dados</div>
+
+      {showNovaComanda && (
+        <ModalNovaComanda onClose={() => setShowNovaComanda(false)} onCriar={criarComanda} />
+      )}
+
+      {showVendaRapida && (
+        <ModalVendaRapida
+          products={state.products}
+          onClose={() => setShowVendaRapida(false)}
+          onConfirmar={registrarVendaRapida}
+        />
+      )}
+
+      {showPagamento && comandaAtual && (
+        <ModalPagamento
+          total={comandaTotal(comandaAtual)}
+          onClose={() => setShowPagamento(false)}
+          onConfirmar={(pagamentos, desconto, observacao) => fecharComanda(comandaAtual.id, pagamentos, desconto, observacao)}
+        />
+      )}
+
+      {showAbrirCaixa && (
+        <ModalAbrirCaixa
+          onClose={() => setShowAbrirCaixa(false)}
+          onConfirmar={abrirCaixa}
+        />
+      )}
+
+      {showFecharCaixa && state.caixaAtual && (
+        <ModalFecharCaixa
+          caixa={state.caixaAtual}
+          vendas={state.vendas.filter(v => v.caixaId === state.caixaAtual.id)}
+          onClose={() => setShowFecharCaixa(false)}
+          onConfirmar={fecharCaixa}
+        />
+      )}
+
+      {showEditarCaixa && state.caixaAtual && (
+        <ModalEditarCaixa
+          caixa={state.caixaAtual}
+          onClose={() => setShowEditarCaixa(false)}
+          onAdicionar={adicionarAjusteCaixa}
+          onRemover={removerAjusteCaixa}
+        />
+      )}
+
+      {showRelatorioPeriodo && (
+        <ModalRelatorioPeriodo
+          vendas={state.vendas}
+          onClose={() => setShowRelatorioPeriodo(false)}
+        />
+      )}
+
+      {confirmCancelComanda && (
+        <div className="modal-backdrop" onClick={() => setConfirmCancelComanda(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h3>Cancelar comanda?</h3>
+            <p style={{ fontSize: 14, color: '#6b5c4c' }}>Todos os itens lançados voltam para o estoque e a comanda será removida sem gerar venda.</p>
+            <div className="modal-actions">
+              <button className="btn btn-outline btn-full" onClick={() => setConfirmCancelComanda(null)}>Voltar</button>
+              <button className="btn btn-full" style={{ background: 'var(--vermelho)', color: '#fff' }} onClick={() => cancelarComanda(confirmCancelComanda)}>Cancelar comanda</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmReabrirCaixa && (
+        <div className="modal-backdrop" onClick={() => setConfirmReabrirCaixa(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h3>Reabrir este caixa?</h3>
+            <p style={{ fontSize: 14, color: '#6b5c4c' }}>
+              O fechamento é desfeito e o caixa volta a ficar aberto, com troco inicial de {formatBRL(confirmReabrirCaixa.trocoInicial)} e aberto desde {formatTime(confirmReabrirCaixa.abertoEm)}. As vendas que já estavam ligadas a ele continuam contabilizadas normalmente.
+            </p>
+            <div className="modal-actions">
+              <button className="btn btn-outline btn-full" onClick={() => setConfirmReabrirCaixa(null)}>Cancelar</button>
+              <button className="btn btn-verde btn-full" onClick={() => reabrirCaixa(confirmReabrirCaixa.id)}>Reabrir caixa</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmDelete && (
+        <div className="modal-backdrop" onClick={() => setConfirmDelete(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h3>Remover produto?</h3>
+            <p style={{ fontSize: 14, color: '#6b5c4c' }}>Essa ação não pode ser desfeita. O histórico de vendas anteriores é mantido.</p>
+            <div className="modal-actions">
+              <button className="btn btn-outline btn-full" onClick={() => setConfirmDelete(null)}>Cancelar</button>
+              <button className="btn btn-full" style={{ background: 'var(--vermelho)', color: '#fff' }} onClick={() => deleteProduct(confirmDelete)}>Remover</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="toast-wrap">
+        {toasts.map(t => (
+          <div key={t.id} className={`toast ${t.type === 'venda' ? 'venda' : ''} ${t.type === 'erro' ? 'erro' : ''}`}>
+            {t.type === 'venda'
+              ? <svg viewBox="0 0 24 24" fill="none" width="15" height="15"><path d="m5 12.5 4.5 4.5L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              : <svg viewBox="0 0 24 24" fill="none" width="15" height="15"><path d="M4 10a8 8 0 1 1 2.5 5.8M4 10V5m0 5h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+            {t.msg}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Clock() {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000 * 30);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <div className="clock">
+      <div className="date">{now.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' })}</div>
+      <div>{now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>
+    </div>
+  );
+}
+
+// ---------- Lista de comandas ----------
+function TelaComandasLista({ comandas, onAbrir, onNova, onVendaRapida }) {
+  return (
+    <div className="card panel">
+      <div className="section-title">
+        <span>Comandas abertas ({comandas.length})</span>
+      </div>
+      <div className="comanda-grid">
+        <button className="venda-rapida-card" onClick={onVendaRapida}>
+          <svg viewBox="0 0 24 24" fill="none"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" fill="currentColor" fillOpacity="0.15"/></svg>
+          Venda rápida
+          <span>Vender e receber na hora, sem comanda</span>
+        </button>
+        <button className="comanda-new-card" onClick={onNova}>
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+          Nova comanda
+        </button>
+        {comandas.map(c => {
+          const total = comandaTotal(c);
+          const qtdItens = c.itens.reduce((a, it) => a + it.qtd, 0);
+          return (
+            <button key={c.id} className="comanda-card" onClick={() => onAbrir(c.id)}>
+              <div className="comanda-card-top">
+                <div>
+                  <div className="comanda-nome">{c.nome}</div>
+                  {c.mesa && <div className="comanda-mesa">{c.mesa}</div>}
+                </div>
+                <div className="comanda-time">{formatTime(c.criadoEm)}</div>
+              </div>
+              <div className="comanda-total">{formatBRL(total)}</div>
+              <div className="comanda-itens-count">{qtdItens === 0 ? 'Sem itens ainda' : `${qtdItens} ${qtdItens === 1 ? 'item' : 'itens'}`}</div>
+            </button>
+          );
+        })}
+      </div>
+      {comandas.length === 0 && (
+        <div className="empty-state" style={{ marginTop: 4 }}>
+          <p>Nenhuma comanda aberta</p>
+          <span>Use "Venda rápida" para vender na hora ou "Nova comanda" para uma conta que vai receber vários lançamentos</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ModalNovaComanda({ onClose, onCriar }) {
+  const [nome, setNome] = useState('');
+  const [mesa, setMesa] = useState('');
+  const inputRef = useRef(null);
+  useEffect(() => { inputRef.current && inputRef.current.focus(); }, []);
+  const criar = () => onCriar(nome.trim(), mesa.trim());
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <h3>Nova comanda</h3>
+        <div className="form-field" style={{ marginBottom: 10 }}>
+          <label>Nome do cliente</label>
+          <input ref={inputRef} value={nome} onChange={e => setNome(e.target.value)} placeholder="Ex: João, Mesa da esquina..." onKeyDown={e => e.key === 'Enter' && criar()} />
+        </div>
+        <div className="form-field">
+          <label>Mesa / referência (opcional)</label>
+          <input value={mesa} onChange={e => setMesa(e.target.value)} placeholder="Ex: Mesa 4, Balcão..." onKeyDown={e => e.key === 'Enter' && criar()} />
+        </div>
+        <div className="modal-actions">
+          <button className="btn btn-outline btn-full" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-primary btn-full" onClick={criar}>Abrir comanda</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Detalhe de comanda ----------
+function TelaComandaDetalhe({ comanda, products, onVoltar, onAdicionarItem, onAjustarItem, onRemoverItem, onCancelar, onFechar }) {
+  const total = comandaTotal(comanda);
+  const [busca, setBusca] = useState('');
+  const produtosFiltrados = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    if (!termo) return products;
+    return products.filter(p => p.nome.toLowerCase().includes(termo));
+  }, [products, busca]);
+  return (
+    <div>
+      <div className="comanda-header">
+        <button className="btn-back" onClick={onVoltar}>
+          <svg viewBox="0 0 24 24" fill="none"><path d="M15 5 8 12l7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          Todas as comandas
+        </button>
+        <div className="comanda-title-block">
+          <div>
+            <h2>{comanda.nome}</h2>
+            {comanda.mesa && <div className="comanda-mesa">{comanda.mesa}</div>}
+          </div>
+        </div>
+        <button className="btn-danger-ghost" onClick={onCancelar}>cancelar comanda</button>
+      </div>
+
+      <div className="grid-2">
+        <div className="card panel">
+          <div className="section-title">Toque para lançar na comanda</div>
+          <div className="prod-search-wrap">
+            <svg viewBox="0 0 24 24" fill="none" className="prod-search-icon"><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/><path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+            <input
+              type="text"
+              className="prod-search-input"
+              placeholder="Buscar produto..."
+              value={busca}
+              onChange={e => setBusca(e.target.value)}
+            />
+            {busca && (
+              <button className="prod-search-clear" onClick={() => setBusca('')} aria-label="Limpar busca">×</button>
+            )}
+          </div>
+          <div className="prod-grid">
+            {produtosFiltrados.map(p => {
+              const isKit = p.tipo === 'kit';
+              const disp = estoqueDisponivel(p, products);
+              const low = !isKit && p.qtd <= p.minimo;
+              const out = disp <= 0;
+              return (
+                <button key={p.id} className={`prod-btn ${low ? 'low' : ''} ${out ? 'out' : ''}`} onClick={() => onAdicionarItem(p.id)}>
+                  <span className="prod-stock">{out ? 'zerado' : `${disp} un`}</span>
+                  {isKit && <span className="kit-badge">KIT</span>}
+                  <div className="prod-name">{p.nome}</div>
+                  <div className="prod-price">{formatBRL(p.preco)}</div>
+                </button>
+              );
+            })}
+          </div>
+          {products.length === 0 && (
+            <div className="empty-state">
+              <p>Nenhum produto cadastrado ainda. Vá em Estoque para adicionar.</p>
+            </div>
+          )}
+          {products.length > 0 && produtosFiltrados.length === 0 && (
+            <div className="empty-state">
+              <p>Nenhum produto encontrado para "{busca}"</p>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <div className="card panel">
+            <div className="section-title">Itens da comanda ({comanda.itens.reduce((a, it) => a + it.qtd, 0)})</div>
+            <div className="scroll-y">
+              {comanda.itens.length === 0 && (
+                <div className="empty-state">
+                  <p>Nenhum item lançado ainda</p>
+                  <span>Toque em um produto ao lado para adicionar</span>
+                </div>
+              )}
+              {comanda.itens.map(it => (
+                <div className="item-row" key={it.id}>
+                  <div style={{ minWidth: 0 }}>
+                    <div className="item-row-name">{it.nome}{it.kit && <span className="kit-badge kit-badge-inline">KIT</span>}</div>
+                    <div className="item-row-price">{formatBRL(it.preco)} / un</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div className="stepper">
+                      <button className="step-btn" onClick={() => onAjustarItem(it.id, -1)}>−</button>
+                      <span className="step-qty">{it.qtd}</span>
+                      <button className="step-btn" onClick={() => onAjustarItem(it.id, 1)}>+</button>
+                    </div>
+                    <div className="item-row-total">{formatBRL(it.preco * it.qtd)}</div>
+                    <button className="btn-danger-ghost" onClick={() => onRemoverItem(it.id)}>×</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="comanda-total-bar">
+              <span className="label">Total da comanda</span>
+              <span className="value">{formatBRL(total)}</span>
+            </div>
+
+            <button className="btn btn-verde btn-full" style={{ marginTop: 14, padding: '14px 20px', fontSize: 15 }} disabled={comanda.itens.length === 0} onClick={onFechar}>
+              Fechar comanda e receber
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Formulário de pagamento (reutilizável) ----------
+function PagamentoForm({ total, onValidChange }) {
+  const [dividir, setDividir] = useState(false);
+  const [metodoUnico, setMetodoUnico] = useState('dinheiro');
+  const [descontoStr, setDescontoStr] = useState('');
+  const [observacao, setObservacao] = useState('');
+
+  const descontoNum = Math.min(total, Math.max(0, parseFloat(String(descontoStr).replace(',', '.')) || 0));
+  const totalComDesconto = Math.max(0, total - descontoNum);
+
+  const [valorRecebido, setValorRecebido] = useState(String(total.toFixed(2)));
+  const [linhas, setLinhas] = useState([{ id: uid(), metodo: 'dinheiro', valor: String(total.toFixed(2)) }]);
+
+  const recebidoNum = parseFloat(valorRecebido.replace(',', '.')) || 0;
+  const troco = metodoUnico === 'dinheiro' ? recebidoNum - totalComDesconto : 0;
+
+  const somaLinhas = linhas.reduce((a, l) => a + (parseFloat(String(l.valor).replace(',', '.')) || 0), 0);
+  const restante = totalComDesconto - somaLinhas;
+
+  const addLinha = () => setLinhas(l => [...l, { id: uid(), metodo: 'pix', valor: restante > 0 ? restante.toFixed(2) : '0.00' }]);
+  const removeLinha = (id) => setLinhas(l => l.length > 1 ? l.filter(x => x.id !== id) : l);
+  const updateLinha = (id, field, val) => setLinhas(l => l.map(x => x.id === id ? { ...x, [field]: val } : x));
+
+  // Ao mudar o desconto, realinha o valor padrão (quando ainda não dividido manualmente)
+  useEffect(() => {
+    setValorRecebido(String(totalComDesconto.toFixed(2)));
+    setLinhas(l => l.length === 1 ? [{ ...l[0], valor: String(totalComDesconto.toFixed(2)) }] : l);
+    // eslint-disable-next-line
+  }, [descontoNum]);
+
+  const podeConfirmar = dividir
+    ? Math.abs(restante) < 0.01 && linhas.every(l => (parseFloat(String(l.valor).replace(',', '.')) || 0) > 0)
+    : (metodoUnico !== 'dinheiro' || recebidoNum >= totalComDesconto - 0.001);
+
+  useEffect(() => {
+    const pagamentos = dividir
+      ? linhas.map(l => ({ metodo: l.metodo, valor: parseFloat(String(l.valor).replace(',', '.')) || 0 }))
+      : [{ metodo: metodoUnico, valor: totalComDesconto }];
+    onValidChange(pagamentos, podeConfirmar, descontoNum, observacao);
+    // eslint-disable-next-line
+  }, [dividir, metodoUnico, valorRecebido, JSON.stringify(linhas), totalComDesconto, descontoNum, observacao]);
+
+  return (
+    <div>
+      <div className="pay-summary-row">
+        <span>Subtotal</span>
+        <span className="v">{formatBRL(total)}</span>
+      </div>
+
+      <div className="form-field" style={{ marginTop: 10 }}>
+        <label>Desconto (R$)</label>
+        <input type="number" step="0.01" min="0" placeholder="0,00" value={descontoStr} onChange={e => setDescontoStr(e.target.value)} />
+      </div>
+
+      {descontoNum > 0 && (
+        <div className="pay-summary-row negativo" style={{ marginTop: 8 }}>
+          <span>Desconto aplicado</span>
+          <span className="v">-{formatBRL(descontoNum)}</span>
+        </div>
+      )}
+
+      <div className="pay-summary-row total" style={{ marginTop: 8 }}>
+        <span>Total a pagar</span>
+        <span className="v">{formatBRL(totalComDesconto)}</span>
+      </div>
+
+      <div style={{ margin: '16px 0 10px' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: 'var(--madeira-2)', cursor: 'pointer' }}>
+          <input type="checkbox" checked={dividir} onChange={e => setDividir(e.target.checked)} style={{ width: 16, height: 16 }} />
+          Dividir em mais de uma forma de pagamento
+        </label>
+      </div>
+
+      {!dividir && (
+        <div>
+          <div className="form-row" style={{ marginTop: 12 }}>
+            {Object.entries(METODOS).map(([key, m]) => {
+              const Icon = METODO_ICON[m.icon];
+              return (
+                <button key={key} className={`method-btn ${metodoUnico === key ? 'selected' : ''}`} onClick={() => setMetodoUnico(key)}>
+                  <Icon />
+                  {m.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {metodoUnico === 'dinheiro' && (
+            <div style={{ marginTop: 14 }}>
+              <div className="form-field">
+                <label>Valor recebido em dinheiro</label>
+                <input type="number" step="0.01" value={valorRecebido} onChange={e => setValorRecebido(e.target.value)} />
+              </div>
+              <div className={`pay-summary-row ${troco < 0 ? 'negativo' : 'ok'}`} style={{ marginTop: 8 }}>
+                <span>{troco < 0 ? 'Falta receber' : 'Troco a devolver'}</span>
+                <span className="v">{formatBRL(Math.abs(troco))}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {dividir && (
+        <div style={{ marginTop: 8 }}>
+          {linhas.map(l => (
+            <div className="split-row" key={l.id}>
+              <select value={l.metodo} onChange={e => updateLinha(l.id, 'metodo', e.target.value)}>
+                {Object.entries(METODOS).map(([key, m]) => <option key={key} value={key}>{m.label}</option>)}
+              </select>
+              <input type="number" step="0.01" value={l.valor} onChange={e => updateLinha(l.id, 'valor', e.target.value)} />
+              <button className="split-remove" onClick={() => removeLinha(l.id)}>×</button>
+            </div>
+          ))}
+          <button className="btn btn-outline btn-sm" style={{ marginTop: 4 }} onClick={addLinha}>+ Adicionar forma de pagamento</button>
+
+          <div className={`pay-summary-row ${Math.abs(restante) < 0.01 ? 'ok' : 'negativo'}`} style={{ marginTop: 12 }}>
+            <span>{restante > 0.009 ? 'Restante a alocar' : restante < -0.009 ? 'Valor excede o total' : 'Pagamento completo'}</span>
+            <span className="v">{formatBRL(Math.abs(restante))}</span>
+          </div>
+        </div>
+      )}
+
+      <div className="form-field" style={{ marginTop: 16 }}>
+        <label>Observação (opcional)</label>
+        <textarea
+          rows={2}
+          placeholder="Ex: cliente pediu para tirar o gelo, mesa reservada, etc."
+          value={observacao}
+          onChange={e => setObservacao(e.target.value)}
+          className="obs-textarea"
+        />
+      </div>
+    </div>
+  );
+}
+
+// ---------- Modal de relatório do dia ----------
+function ModalRelatorio({ dataSelecionada, faturamento, lucro, itens, ticketMedio, produtoTop, vendas, porMetodo, estoqueBaixo, caixasFechados, onClose }) {
+  const [copiado, setCopiado] = useState(false);
+  const texto = useMemo(() => gerarTextoRelatorio({ dataSelecionada, faturamento, lucro, itens, ticketMedio, produtoTop, vendas, porMetodo, estoqueBaixo, caixasFechados }), [dataSelecionada, faturamento, lucro, itens, ticketMedio, produtoTop, vendas, porMetodo, estoqueBaixo, caixasFechados]);
+
+  const copiarTexto = async () => {
+    try {
+      await navigator.clipboard.writeText(texto);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    } catch (e) {
+      // fallback: seleciona o texto manualmente se clipboard falhar
+    }
+  };
+
+  const baixarTxt = () => {
+    const blob = new Blob([texto], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `relatorio-${dataSelecionada}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const enviarWhatsapp = () => {
+    const url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+    window.open(url, '_blank');
+  };
+
+  const salvarPdf = () => {
+    window.print();
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+        <h3>Relatório do dia</h3>
+        <p className="modal-sub">{formatDataLabel(dataSelecionada)}</p>
+        <pre className="relatorio-preview">{texto}</pre>
+        <div className="modal-actions" style={{ flexWrap: 'wrap' }}>
+          <button className="btn btn-outline btn-full" onClick={copiarTexto}>{copiado ? 'Copiado ✓' : 'Copiar texto'}</button>
+          <button className="btn btn-outline btn-full" onClick={baixarTxt}>Baixar .txt</button>
+        </div>
+        <div className="modal-actions">
+          <button className="btn btn-verde btn-full" onClick={salvarPdf}>Salvar em PDF</button>
+        </div>
+        <div className="modal-actions">
+          <button className="btn btn-outline btn-full" onClick={enviarWhatsapp}>Enviar por WhatsApp</button>
+        </div>
+        <div className="modal-actions">
+          <button className="btn btn-outline btn-full" onClick={onClose}>Fechar</button>
+        </div>
+
+        {/* Área usada exclusivamente na impressão/PDF (fica oculta na tela) */}
+        <div id="relatorio-print-area">
+          <h2>Barril — Relatório do dia</h2>
+          <p className="print-sub">{formatDataLabel(dataSelecionada)}</p>
+          <pre>{texto}</pre>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Modal de relatório por período (de um dia até outro) ----------
+function ModalRelatorioPeriodo({ vendas, onClose }) {
+  const hojeStr = dateToInputValue(new Date());
+  const [inicio, setInicio] = useState(shiftDate(hojeStr, -6));
+  const [fim, setFim] = useState(hojeStr);
+  const [copiado, setCopiado] = useState(false);
+
+  // Garante que início nunca fique depois do fim
+  const inicioValido = inicio > fim ? fim : inicio;
+
+  const { faturamento, lucro, itens, numVendas, ticketMedio, produtoTop, porMetodo, porDia, topProdutos } = useMemo(() => {
+    const [iy, im, id] = inicioValido.split('-').map(Number);
+    const [fy, fm, fd] = fim.split('-').map(Number);
+    const startMs = new Date(iy, im - 1, id, 0, 0, 0, 0).getTime();
+    const endMs = new Date(fy, fm - 1, fd, 23, 59, 59, 999).getTime();
+    const vendasPeriodo = vendas.filter(v => v.ts >= startMs && v.ts <= endMs);
+
+    const faturamento = vendasPeriodo.reduce((a, s) => a + s.total, 0);
+    const lucro = vendasPeriodo.reduce((a, s) => a + s.itens.reduce((x, it) => x + (it.preco - it.custo) * it.qtd, 0) - (s.desconto || 0), 0);
+    const itens = vendasPeriodo.reduce((a, s) => a + s.itens.reduce((x, it) => x + it.qtd, 0), 0);
+    const ticketMedio = vendasPeriodo.length ? faturamento / vendasPeriodo.length : 0;
+
+    const porMetodo = { dinheiro: 0, pix: 0, debito: 0, credito: 0 };
+    vendasPeriodo.forEach(s => s.pagamentos.forEach(p => { porMetodo[p.metodo] = (porMetodo[p.metodo] || 0) + p.valor; }));
+
+    const produtoMap = {};
+    vendasPeriodo.forEach(s => s.itens.forEach(it => { produtoMap[it.nome] = (produtoMap[it.nome] || 0) + it.qtd; }));
+    const topProdutos = Object.entries(produtoMap).map(([nome, qtd]) => ({ nome, qtd })).sort((a, b) => b.qtd - a.qtd).slice(0, 5);
+    const produtoTop = topProdutos[0] || null;
+
+    const diaMap = {};
+    vendasPeriodo.forEach(s => {
+      const key = dateToInputValue(new Date(s.ts));
+      if (!diaMap[key]) diaMap[key] = { data: key, faturamento: 0, numVendas: 0 };
+      diaMap[key].faturamento += s.total;
+      diaMap[key].numVendas += 1;
+    });
+    const porDia = Object.values(diaMap).sort((a, b) => a.data < b.data ? -1 : 1);
+
+    return { faturamento, lucro, itens, numVendas: vendasPeriodo.length, ticketMedio, produtoTop, porMetodo, porDia, topProdutos };
+  }, [vendas, inicioValido, fim]);
+
+  const texto = useMemo(() => gerarTextoRelatorioPeriodo({ inicio: inicioValido, fim, faturamento, lucro, itens, numVendas, ticketMedio, produtoTop, porMetodo, porDia, topProdutos }), [inicioValido, fim, faturamento, lucro, itens, numVendas, ticketMedio, produtoTop, porMetodo, porDia, topProdutos]);
+
+  const copiarTexto = async () => {
+    try {
+      await navigator.clipboard.writeText(texto);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    } catch (e) {}
+  };
+
+  const baixarTxt = () => {
+    const blob = new Blob([texto], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `relatorio-${inicioValido}-a-${fim}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const enviarWhatsapp = () => {
+    const url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+    window.open(url, '_blank');
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+        <h3>Vendas por período</h3>
+        <p className="modal-sub">Escolha o intervalo de datas para ver o total vendido.</p>
+
+        <div className="form-row" style={{ marginTop: 12 }}>
+          <div className="form-field" style={{ flex: 1 }}>
+            <label>De</label>
+            <input type="date" value={inicioValido} max={fim} onChange={e => e.target.value && setInicio(e.target.value)} />
+          </div>
+          <div className="form-field" style={{ flex: 1 }}>
+            <label>Até</label>
+            <input type="date" value={fim} min={inicioValido} max={hojeStr} onChange={e => e.target.value && setFim(e.target.value)} />
+          </div>
+        </div>
+
+        <div className="pay-summary-row" style={{ marginTop: 14 }}>
+          <span>Vendas no período</span>
+          <span className="v">{numVendas}</span>
+        </div>
+        <div className="pay-summary-row">
+          <span>Itens vendidos</span>
+          <span className="v">{itens}</span>
+        </div>
+        <div className="pay-summary-row">
+          <span>Ticket médio</span>
+          <span className="v">{formatBRL(ticketMedio)}</span>
+        </div>
+        <div className="pay-summary-row">
+          <span>Lucro estimado</span>
+          <span className="v">{formatBRL(lucro)}</span>
+        </div>
+        <div className="pay-summary-row total">
+          <span>Faturamento total</span>
+          <span className="v">{formatBRL(faturamento)}</span>
+        </div>
+
+        {faturamento > 0 && (
+          <div className="pay-badges-wrap" style={{ justifyContent: 'flex-start', marginTop: 10 }}>
+            {Object.entries(METODOS).map(([key, m]) => porMetodo[key] > 0 && (
+              <span key={key} className={`pay-badge ${m.cls}`}>{m.label} {formatBRL(porMetodo[key])}</span>
+            ))}
+          </div>
+        )}
+
+        {porDia.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <div className="section-title" style={{ fontSize: 14 }}>Faturamento por dia</div>
+            <div style={{ marginTop: 6, maxHeight: 200, overflowY: 'auto' }}>
+              {porDia.map(d => (
+                <div className="ajuste-item" key={d.data}>
+                  <span style={{ fontSize: 13.5 }}>{formatDataCurta(d.data)} · {d.numVendas} {d.numVendas === 1 ? 'venda' : 'vendas'}</span>
+                  <span style={{ fontWeight: 700, fontSize: 13.5 }}>{formatBRL(d.faturamento)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="modal-actions" style={{ flexWrap: 'wrap', marginTop: 16 }}>
+          <button className="btn btn-outline btn-full" onClick={copiarTexto}>{copiado ? 'Copiado ✓' : 'Copiar texto'}</button>
+          <button className="btn btn-outline btn-full" onClick={baixarTxt}>Baixar .txt</button>
+        </div>
+        <div className="modal-actions">
+          <button className="btn btn-outline btn-full" onClick={enviarWhatsapp}>Enviar por WhatsApp</button>
+        </div>
+        <div className="modal-actions">
+          <button className="btn btn-outline btn-full" onClick={onClose}>Fechar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Modal de abertura de caixa ----------
+// ---------- Modal de edição do caixa (lançar valor sem produto) ----------
+function ModalEditarCaixa({ caixa, onClose, onAdicionar, onRemover }) {
+  const [valorStr, setValorStr] = useState('');
+  const [metodo, setMetodo] = useState('dinheiro');
+  const [motivo, setMotivo] = useState('');
+  const ajustes = caixa.ajustes || [];
+  const totalAjustes = ajustes.reduce((a, j) => a + j.valor, 0);
+  const valorNum = parseFloat(String(valorStr).replace(',', '.')) || 0;
+
+  const lancar = () => {
+    if (!valorNum) return;
+    onAdicionar(valorNum, metodo, motivo.trim());
+    setValorStr('');
+    setMotivo('');
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+        <h3>Editar caixa</h3>
+        <p className="modal-sub">Lance um valor que já entrou (em qualquer forma de pagamento), sem registrar venda de produto. Só afeta a conferência do caixa — não conta como faturamento nem mexe no estoque. Ajustes em dinheiro entram na conferência física; os demais só aparecem no relatório.</p>
+
+        <div className="pay-summary-row" style={{ marginTop: 14 }}>
+          <span>Troco inicial</span>
+          <span className="v">{formatBRL(caixa.trocoInicial)}</span>
+        </div>
+        <div className="pay-summary-row">
+          <span>Ajustes lançados (todas as formas)</span>
+          <span className="v">{formatBRL(totalAjustes)}</span>
+        </div>
+
+        {ajustes.length > 0 && (
+          <div style={{ marginTop: 10, maxHeight: 180, overflowY: 'auto' }}>
+            {ajustes.map(a => (
+              <div className="ajuste-item" key={a.id}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontWeight: 700, fontSize: 13.5 }}>{formatBRL(a.valor)}</span>
+                    <span className={`pay-badge ${METODOS[a.metodo].cls}`}>{METODOS[a.metodo].label}</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#8a7a68', marginTop: 2 }}>
+                    {formatTime(a.ts)}{a.motivo ? ` · ${a.motivo}` : ''}
+                  </div>
+                </div>
+                <button className="btn-danger-ghost" onClick={() => onRemover(a.id)}>remover</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="form-row" style={{ marginTop: 16 }}>
+          {Object.entries(METODOS).map(([key, m]) => {
+            const Icon = METODO_ICON[m.icon];
+            return (
+              <button key={key} className={`method-btn ${metodo === key ? 'selected' : ''}`} onClick={() => setMetodo(key)}>
+                <Icon />
+                {m.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="form-field" style={{ marginTop: 14 }}>
+          <label>Valor a lançar (R$)</label>
+          <input
+            type="number" step="0.01" placeholder="0,00" autoFocus
+            value={valorStr} onChange={e => setValorStr(e.target.value)}
+          />
+        </div>
+        <div className="form-field" style={{ marginTop: 10 }}>
+          <label>Motivo (opcional)</label>
+          <input
+            type="text" placeholder="Ex: recuperação do caixa de ontem"
+            value={motivo} onChange={e => setMotivo(e.target.value)}
+          />
+        </div>
+
+        <div className="modal-actions">
+          <button className="btn btn-outline btn-full" onClick={onClose}>Fechar</button>
+          <button className="btn btn-verde btn-full" disabled={!valorNum} onClick={lancar}>Lançar valor</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ModalAbrirCaixa({ onClose, onConfirmar }) {
+  const [trocoStr, setTrocoStr] = useState('');
+  const trocoNum = Math.max(0, parseFloat(String(trocoStr).replace(',', '.')) || 0);
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <h3>Abrir caixa</h3>
+        <p className="modal-sub">Informe o valor em dinheiro que está entrando no caixa como troco inicial.</p>
+        <div className="form-field" style={{ marginTop: 14 }}>
+          <label>Troco inicial (R$)</label>
+          <input
+            type="number" step="0.01" min="0" placeholder="0,00" autoFocus
+            value={trocoStr} onChange={e => setTrocoStr(e.target.value)}
+          />
+        </div>
+        <div className="modal-actions">
+          <button className="btn btn-outline btn-full" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-verde btn-full" onClick={() => onConfirmar(trocoNum)}>Abrir caixa</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Modal de fechamento de caixa ----------
+function ModalFecharCaixa({ caixa, vendas, onClose, onConfirmar }) {
+  const [contadoStr, setContadoStr] = useState('');
+
+  const porMetodo = { dinheiro: 0, pix: 0, debito: 0, credito: 0 };
+  vendas.forEach(v => v.pagamentos.forEach(p => { porMetodo[p.metodo] = (porMetodo[p.metodo] || 0) + p.valor; }));
+  const totalVendas = vendas.reduce((a, v) => a + v.total, 0);
+  const ajustes = caixa.ajustes || [];
+  const ajustesPorMetodo = { dinheiro: 0, pix: 0, debito: 0, credito: 0 };
+  ajustes.forEach(j => { ajustesPorMetodo[j.metodo] = (ajustesPorMetodo[j.metodo] || 0) + j.valor; });
+  const totalAjustes = ajustes.reduce((a, j) => a + j.valor, 0);
+  const esperado = caixa.trocoInicial + porMetodo.dinheiro + ajustesPorMetodo.dinheiro;
+
+  const contadoNum = contadoStr === '' ? null : (parseFloat(String(contadoStr).replace(',', '.')) || 0);
+  const diferenca = contadoNum === null ? null : contadoNum - esperado;
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+        <h3>Fechar caixa</h3>
+        <p className="modal-sub">Aberto às {formatTime(caixa.abertoEm)} · {vendas.length} {vendas.length === 1 ? 'venda' : 'vendas'}</p>
+
+        <div className="pay-summary-row" style={{ marginTop: 14 }}>
+          <span>Troco inicial</span>
+          <span className="v">{formatBRL(caixa.trocoInicial)}</span>
+        </div>
+        {ajustesPorMetodo.dinheiro !== 0 && (
+          <div className="pay-summary-row">
+            <span>Ajustes em dinheiro</span>
+            <span className="v">{formatBRL(ajustesPorMetodo.dinheiro)}</span>
+          </div>
+        )}
+        <div className="pay-summary-row">
+          <span>Vendas em dinheiro</span>
+          <span className="v">{formatBRL(porMetodo.dinheiro)}</span>
+        </div>
+        <div className="pay-summary-row total">
+          <span>Total esperado em caixa (dinheiro físico)</span>
+          <span className="v">{formatBRL(esperado)}</span>
+        </div>
+
+        {totalAjustes !== 0 && (
+          <div className="pay-badges-wrap" style={{ justifyContent: 'flex-start', marginTop: 10 }}>
+            {Object.entries(METODOS).map(([key, m]) => ajustesPorMetodo[key] > 0 && (
+              <span key={key} className={`pay-badge ${m.cls}`}>Ajuste {m.label} {formatBRL(ajustesPorMetodo[key])}</span>
+            ))}
+          </div>
+        )}
+
+        <div className="pay-badges-wrap" style={{ justifyContent: 'flex-start', marginTop: 10 }}>
+          {Object.entries(METODOS).map(([key, m]) => porMetodo[key] > 0 && (
+            <span key={key} className={`pay-badge ${m.cls}`}>{m.label} {formatBRL(porMetodo[key])}</span>
+          ))}
+        </div>
+        <div className="pay-summary-row" style={{ marginTop: 10 }}>
+          <span>Faturamento total do período</span>
+          <span className="v">{formatBRL(totalVendas)}</span>
+        </div>
+
+        <div className="form-field" style={{ marginTop: 16 }}>
+          <label>Valor contado em dinheiro (conferência física)</label>
+          <input
+            type="number" step="0.01" min="0" placeholder="0,00" autoFocus
+            value={contadoStr} onChange={e => setContadoStr(e.target.value)}
+          />
+        </div>
+
+        {contadoNum !== null && (
+          <div className={`pay-summary-row ${Math.abs(diferenca) < 0.01 ? 'ok' : 'negativo'}`} style={{ marginTop: 8 }}>
+            <span>{diferenca > 0.009 ? 'Sobra no caixa' : diferenca < -0.009 ? 'Falta no caixa' : 'Caixa confere'}</span>
+            <span className="v">{formatBRL(Math.abs(diferenca))}</span>
+          </div>
+        )}
+
+        <div className="modal-actions">
+          <button className="btn btn-outline btn-full" onClick={onClose}>Voltar</button>
+          <button className="btn btn-verde btn-full" onClick={() => onConfirmar(contadoNum === null ? 0 : contadoNum)}>Confirmar fechamento</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Modal de pagamento (fechamento de comanda) ----------
+function ModalPagamento({ total, onClose, onConfirmar }) {
+  const [pagamentos, setPagamentos] = useState([{ metodo: 'dinheiro', valor: total }]);
+  const [valido, setValido] = useState(true);
+  const [desconto, setDesconto] = useState(0);
+  const [observacao, setObservacao] = useState('');
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+        <h3>Receber pagamento</h3>
+        <PagamentoForm total={total} onValidChange={(p, v, d, obs) => { setPagamentos(p); setValido(v); setDesconto(d); setObservacao(obs); }} />
+        <div className="modal-actions">
+          <button className="btn btn-outline btn-full" onClick={onClose}>Voltar</button>
+          <button className="btn btn-verde btn-full" disabled={!valido} onClick={() => onConfirmar(pagamentos, desconto, observacao)}>Confirmar recebimento</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Modal de venda rápida (avulsa) ----------
+function ModalVendaRapida({ products, onClose, onConfirmar }) {
+  const [step, setStep] = useState('itens'); // 'itens' | 'pagamento'
+  const [cart, setCart] = useState([]); // { productId, nome, preco, custo, qtd, kit?, componentes? }
+  const [pagamentos, setPagamentos] = useState([]);
+  const [valido, setValido] = useState(false);
+  const [desconto, setDesconto] = useState(0);
+  const [observacao, setObservacao] = useState('');
+
+  const total = cart.reduce((a, it) => a + it.preco * it.qtd, 0);
+  const qtdTotal = cart.reduce((a, it) => a + it.qtd, 0);
+
+  // Quanto cada produto real já foi consumido pelo carrinho (soma componentes de kits + itens diretos)
+  const consumoMap = useMemo(() => {
+    const map = {};
+    cart.forEach(it => {
+      if (it.kit) {
+        it.componentes.forEach(c => { map[c.productId] = (map[c.productId] || 0) + c.qtd * it.qtd; });
+      } else {
+        map[it.productId] = (map[it.productId] || 0) + it.qtd;
+      }
+    });
+    return map;
+  }, [cart]);
+
+  const restante = (p) => {
+    if (p.tipo === 'kit') {
+      if (!p.itens || p.itens.length === 0) return 0;
+      return Math.min(...p.itens.map(c => {
+        const compProd = products.find(pp => pp.id === c.productId);
+        if (!compProd) return 0;
+        const consumido = consumoMap[c.productId] || 0;
+        return Math.floor((compProd.qtd - consumido) / c.qtd);
+      }));
+    }
+    const consumido = consumoMap[p.id] || 0;
+    return p.qtd - consumido;
+  };
+
+  const addProduto = (p) => {
+    if (restante(p) < 1) return;
+    setCart(prev => {
+      const existing = prev.find(it => it.productId === p.id);
+      if (existing) return prev.map(it => it.productId === p.id ? { ...it, qtd: it.qtd + 1 } : it);
+      const base = { productId: p.id, nome: p.nome, preco: p.preco, custo: p.custo, qtd: 1 };
+      return [...prev, p.tipo === 'kit' ? { ...base, kit: true, componentes: p.itens } : base];
+    });
+  };
+
+  const ajustarQtd = (productId, delta) => {
+    setCart(prev => {
+      const item = prev.find(it => it.productId === productId);
+      if (!item) return prev;
+      if (delta > 0) {
+        const prod = products.find(p => p.id === productId);
+        if (prod && restante(prod) < delta) return prev;
+      }
+      const novaQtd = item.qtd + delta;
+      if (novaQtd <= 0) return prev.filter(it => it.productId !== productId);
+      return prev.map(it => it.productId === productId ? { ...it, qtd: novaQtd } : it);
+    });
+  };
+
+  const removerDoCarrinho = (productId) => setCart(prev => prev.filter(it => it.productId !== productId));
+
+  const confirmar = () => {
+    if (!valido || cart.length === 0) return;
+    onConfirmar(cart, pagamentos, desconto, observacao);
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+        <h3>Venda rápida</h3>
+
+        <div className="step-tabs">
+          <div className={step === 'itens' ? 'active-step' : ''} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span className="step-dot">1</span> Produtos
+          </div>
+          <div className="sep"></div>
+          <div className={step === 'pagamento' ? 'active-step' : ''} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span className="step-dot">2</span> Pagamento
+          </div>
+        </div>
+
+        {step === 'itens' && (
+          <div>
+            <div className="prod-grid" style={{ maxHeight: 260, overflowY: 'auto', marginBottom: 14 }}>
+              {products.map(p => {
+                const rest = restante(p);
+                const out = rest <= 0;
+                return (
+                  <button key={p.id} className={`prod-btn ${out ? 'out' : ''}`} onClick={() => addProduto(p)}>
+                    <span className="prod-stock">{out ? 'zerado' : `${rest} un`}</span>
+                    {p.tipo === 'kit' && <span className="kit-badge">KIT</span>}
+                    <div className="prod-name">{p.nome}</div>
+                    <div className="prod-price">{formatBRL(p.preco)}</div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {cart.length === 0 ? (
+              <div className="empty-state" style={{ padding: '14px 10px' }}>
+                <p>Toque em um produto acima para adicionar</p>
+              </div>
+            ) : (
+              <div style={{ background: 'var(--creme)', borderRadius: 12, padding: '4px 14px' }}>
+                {cart.map(it => (
+                  <div className="mini-cart-row" key={it.productId}>
+                    <div style={{ minWidth: 0 }}>
+                      <div className="item-row-name">{it.nome}{it.kit && <span className="kit-badge kit-badge-inline">KIT</span>}</div>
+                      <div className="item-row-price">{formatBRL(it.preco)} / un</div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div className="stepper">
+                        <button className="step-btn" onClick={() => ajustarQtd(it.productId, -1)}>−</button>
+                        <span className="step-qty">{it.qtd}</span>
+                        <button className="step-btn" onClick={() => ajustarQtd(it.productId, 1)}>+</button>
+                      </div>
+                      <div className="item-row-total">{formatBRL(it.preco * it.qtd)}</div>
+                      <button className="btn-danger-ghost" onClick={() => removerDoCarrinho(it.productId)}>×</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="comanda-total-bar" style={{ marginTop: 14 }}>
+              <span className="label">Total ({qtdTotal} {qtdTotal === 1 ? 'item' : 'itens'})</span>
+              <span className="value">{formatBRL(total)}</span>
+            </div>
+
+            <div className="modal-actions">
+              <button className="btn btn-outline btn-full" onClick={onClose}>Cancelar</button>
+              <button className="btn btn-verde btn-full" disabled={cart.length === 0} onClick={() => setStep('pagamento')}>Ir para pagamento</button>
+            </div>
+          </div>
+        )}
+
+        {step === 'pagamento' && (
+          <div>
+            <PagamentoForm total={total} onValidChange={(p, v, d, obs) => { setPagamentos(p); setValido(v); setDesconto(d); setObservacao(obs); }} />
+            <div className="modal-actions">
+              <button className="btn btn-outline btn-full" onClick={() => setStep('itens')}>Voltar</button>
+              <button className="btn btn-verde btn-full" disabled={!valido} onClick={confirmar}>Confirmar recebimento</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------- Dashboard ----------
+function TelaDashboard({ faturamento, lucro, itens, ticketMedio, produtoTop, vendas, porMetodo, comandasAbertas, estoqueBaixo, valorEstoque, onDesfazer, dataSelecionada, onMudarData, caixasFechados, caixaAtual, onReabrirCaixa, onVerPeriodo }) {
+  const isHoje = dataSelecionada === dateToInputValue(new Date());
+  const sufixo = isHoje ? ' hoje' : '';
+  const [showRelatorio, setShowRelatorio] = useState(false);
+  return (
+    <div>
+      <div className="dashboard-header">
+        <div>
+          <div className="section-title" style={{ marginBottom: 2 }}>Painel de vendas</div>
+          <div className="section-sub titulo-data">{formatDataLabel(dataSelecionada)}{isHoje ? ' · hoje' : ''}</div>
+        </div>
+        <div className="date-nav">
+          <button className="date-arrow" onClick={() => onMudarData(shiftDate(dataSelecionada, -1))}>‹</button>
+          <input type="date" value={dataSelecionada} max={dateToInputValue(new Date())} onChange={e => e.target.value && onMudarData(e.target.value)} />
+          <button className="date-arrow" onClick={() => onMudarData(shiftDate(dataSelecionada, 1))} disabled={isHoje}>›</button>
+          {!isHoje && <button className="btn btn-outline btn-sm" onClick={() => onMudarData(dateToInputValue(new Date()))}>Hoje</button>}
+          <button className="btn btn-primary btn-sm" onClick={() => setShowRelatorio(true)}>
+            <svg viewBox="0 0 24 24" fill="none" style={{ width: 14, height: 14 }}><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/><path d="M14 3v5h5M9 13h6M9 17h6M9 9h1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
+            Relatório do dia
+          </button>
+          <button className="btn btn-outline btn-sm" onClick={onVerPeriodo}>
+            <svg viewBox="0 0 24 24" fill="none" style={{ width: 14, height: 14 }}><rect x="3" y="4.5" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.6"/><path d="M3 9h18M8 2.5v3M16 2.5v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
+            Ver período
+          </button>
+        </div>
+      </div>
+
+      <div className="stat-grid">
+        <div className="stat-card destaque">
+          <div className="stat-label">Faturamento{sufixo}</div>
+          <div className="stat-value">{formatBRL(faturamento)}</div>
+          <div className="stat-sub">{vendas.length} comandas fechadas</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Lucro estimado</div>
+          <div className="stat-value">{formatBRL(lucro)}</div>
+          <div className="stat-sub">Preço − custo</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Itens vendidos</div>
+          <div className="stat-value">{itens}</div>
+          <div className="stat-sub">Ticket médio {formatBRL(ticketMedio)}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">{isHoje ? 'Comandas abertas agora' : 'Produto mais vendido'}</div>
+          <div className="stat-value" style={{ fontSize: isHoje ? 25 : 19 }}>{isHoje ? comandasAbertas : (produtoTop ? produtoTop[0] : '—')}</div>
+          <div className="stat-sub">{isHoje ? (produtoTop ? `Top: ${produtoTop[0]}` : 'Sem vendas ainda') : (produtoTop ? `${produtoTop[1]} unidades` : 'Sem vendas neste dia')}</div>
+        </div>
+      </div>
+
+      <div className="stat-grid" style={{ marginBottom: 20 }}>
+        <div className="method-stat">
+          <div className="method-stat-icon"><IconCash /></div>
+          <div>
+            <div className="method-stat-label">Dinheiro</div>
+            <div className="method-stat-value">{formatBRL(porMetodo.dinheiro)}</div>
+          </div>
+        </div>
+        <div className="method-stat">
+          <div className="method-stat-icon"><IconPix /></div>
+          <div>
+            <div className="method-stat-label">Pix</div>
+            <div className="method-stat-value">{formatBRL(porMetodo.pix)}</div>
+          </div>
+        </div>
+        <div className="method-stat">
+          <div className="method-stat-icon"><IconCard /></div>
+          <div>
+            <div className="method-stat-label">Débito</div>
+            <div className="method-stat-value">{formatBRL(porMetodo.debito)}</div>
+          </div>
+        </div>
+        <div className="method-stat">
+          <div className="method-stat-icon"><IconCard /></div>
+          <div>
+            <div className="method-stat-label">Crédito</div>
+            <div className="method-stat-value">{formatBRL(porMetodo.credito)}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid-2">
+        <div className="card panel">
+          <div className="section-title">Extrato {isHoje ? 'de hoje' : `de ${formatDataCurta(dataSelecionada)}`}</div>
+          <div className="scroll-y">
+            {vendas.length === 0 && (
+              <div className="empty-state">
+                <p>{isHoje ? 'O painel se preenche conforme as comandas forem fechadas' : 'Nenhuma comanda fechada nesse dia'}</p>
+              </div>
+            )}
+            {vendas.map(s => (
+              <div className="feed-item" key={s.id}>
+                <div className="feed-left">
+                  <div className="feed-dot"></div>
+                  <div style={{ minWidth: 0 }}>
+                    <div className="feed-name">{s.nome}{s.mesa ? ` · ${s.mesa}` : ''}</div>
+                    <div className="feed-meta">
+                      {formatTime(s.ts)} · {s.itens.length} {s.itens.length === 1 ? 'item' : 'itens'}
+                      {s.desconto > 0 ? ` · desconto de ${formatBRL(s.desconto)}` : ''}
+                    </div>
+                    <div className="feed-produtos">
+                      {s.itens.map(it => (
+                        <span className="feed-produto-badge" key={it.id}>{it.qtd}× {it.nome}</span>
+                      ))}
+                    </div>
+                    {s.observacao && (
+                      <div className="feed-obs">"{s.observacao}"</div>
+                    )}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div className="feed-value">+{formatBRL(s.total)}</div>
+                    <button className="btn-danger-ghost" onClick={() => onDesfazer(s.id)}>desfazer</button>
+                  </div>
+                  <div className="pay-badges-wrap">
+                    {s.pagamentos.map((p, i) => (
+                      <span key={i} className={`pay-badge ${METODOS[p.metodo].cls}`}>{METODOS[p.metodo].label}{s.pagamentos.length > 1 ? ` ${formatBRL(p.valor)}` : ''}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div className="card panel">
+            <div className="section-title">Estoque baixo</div>
+            {estoqueBaixo.length === 0 && (
+              <div className="empty-state">
+                <p style={{ color: 'var(--verde)' }}>Tudo dentro do nível mínimo</p>
+              </div>
+            )}
+            {estoqueBaixo.map(p => (
+              <div className="feed-item" key={p.id}>
+                <div className="feed-name">{p.nome}</div>
+                <span className="qty-badge low">{p.qtd} un</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="card panel" style={{ marginTop: 16 }}>
+            <div className="section-title">Valor em estoque</div>
+            <div className="stat-value" style={{ color: 'var(--madeira)' }}>{formatBRL(valorEstoque)}</div>
+            <div className="stat-sub" style={{ color: '#8a7a68' }}>Calculado pelo custo dos produtos</div>
+          </div>
+
+          {caixasFechados && caixasFechados.length > 0 && (
+            <div className="card panel" style={{ marginTop: 16 }}>
+              <div className="section-title">Histórico de caixa</div>
+              <div className="scroll-y" style={{ maxHeight: 260 }}>
+                {caixasFechados.slice(0, 10).map(c => (
+                  <div className="feed-item" key={c.id}>
+                    <div style={{ minWidth: 0 }}>
+                      <div className="feed-name">{formatTime(c.abertoEm)} — {formatTime(c.fechadoEm)}</div>
+                      <div className="feed-meta">
+                        troco {formatBRL(c.trocoInicial)}{c.totalAjustes ? ` · ajustes ${formatBRL(c.totalAjustes)}` : ''} · {c.vendas} {c.vendas === 1 ? 'venda' : 'vendas'} · faturou {formatBRL(c.totalVendas)}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                      <span className={`caixa-diff-badge ${Math.abs(c.diferenca) < 0.01 ? 'ok' : (c.diferenca > 0 ? 'sobra' : 'falta')}`}>
+                        {Math.abs(c.diferenca) < 0.01 ? 'confere' : (c.diferenca > 0 ? `+${formatBRL(c.diferenca)}` : `-${formatBRL(Math.abs(c.diferenca))}`)}
+                      </span>
+                      <button
+                        className="btn-verde-ghost"
+                        disabled={!!caixaAtual}
+                        title={caixaAtual ? 'Feche o caixa atual antes de reabrir outro' : 'Reabrir este caixa'}
+                        onClick={() => onReabrirCaixa(c)}
+                      >
+                        reabrir
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {showRelatorio && (
+        <ModalRelatorio
+          dataSelecionada={dataSelecionada}
+          faturamento={faturamento}
+          lucro={lucro}
+          itens={itens}
+          ticketMedio={ticketMedio}
+          produtoTop={produtoTop}
+          vendas={vendas}
+          porMetodo={porMetodo}
+          estoqueBaixo={estoqueBaixo}
+          caixasFechados={caixasFechados}
+          onClose={() => setShowRelatorio(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---------- Estoque ----------
+function TelaEstoque({ products, onUpdateStock, onAddProduct, onEditProduct, onDelete }) {
+  const emptyForm = { nome: '', preco: '', custo: '', qtd: '', minimo: '' };
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [tipo, setTipo] = useState('produto'); // 'produto' | 'kit'
+  const [form, setForm] = useState(emptyForm);
+  const [kitItens, setKitItens] = useState([]); // [{ productId, qtd }]
+  const [kitProdutoSel, setKitProdutoSel] = useState('');
+  const [kitQtdSel, setKitQtdSel] = useState('1');
+  const [buscaEstoque, setBuscaEstoque] = useState('');
+
+  const produtosNormais = useMemo(() => products.filter(p => p.tipo !== 'kit'), [products]);
+
+  const productsFiltrados = useMemo(() => {
+    const termo = buscaEstoque.trim().toLowerCase();
+    if (!termo) return products;
+    return products.filter(p => p.nome.toLowerCase().includes(termo));
+  }, [products, buscaEstoque]);
+
+  const custoKitCalculado = useMemo(() => {
+    return kitItens.reduce((a, it) => {
+      const p = products.find(pp => pp.id === it.productId);
+      return a + (p ? p.custo * it.qtd : 0);
+    }, 0);
+  }, [kitItens, products]);
+
+  const abrirNovo = () => { setEditingId(null); setTipo('produto'); setForm(emptyForm); setKitItens([]); setShowForm(true); };
+  const abrirNovoKit = () => { setEditingId(null); setTipo('kit'); setForm(emptyForm); setKitItens([]); setShowForm(true); };
+  const abrirEdicao = (p) => {
+    setEditingId(p.id);
+    if (p.tipo === 'kit') {
+      setTipo('kit');
+      setForm({ nome: p.nome, preco: String(p.preco), custo: String(p.custo), qtd: '', minimo: '' });
+      setKitItens(p.itens || []);
+    } else {
+      setTipo('produto');
+      setForm({ nome: p.nome, preco: String(p.preco), custo: String(p.custo), qtd: String(p.qtd), minimo: String(p.minimo) });
+      setKitItens([]);
+    }
+    setShowForm(true);
+  };
+  const fecharForm = () => { setShowForm(false); setEditingId(null); setForm(emptyForm); setKitItens([]); };
+
+  const adicionarComponente = () => {
+    const qtd = parseInt(kitQtdSel) || 1;
+    if (!kitProdutoSel || qtd < 1) return;
+    setKitItens(prev => {
+      const existing = prev.find(it => it.productId === kitProdutoSel);
+      if (existing) return prev.map(it => it.productId === kitProdutoSel ? { ...it, qtd: it.qtd + qtd } : it);
+      return [...prev, { productId: kitProdutoSel, qtd }];
+    });
+    setKitProdutoSel('');
+    setKitQtdSel('1');
+  };
+
+  const removerComponente = (productId) => setKitItens(prev => prev.filter(it => it.productId !== productId));
+
+  const submit = () => {
+    if (!form.nome || !form.preco) return;
+    if (tipo === 'kit') {
+      if (kitItens.length === 0) return;
+      const data = {
+        nome: form.nome,
+        tipo: 'kit',
+        preco: parseFloat(form.preco) || 0,
+        custo: form.custo !== '' ? (parseFloat(form.custo) || 0) : custoKitCalculado,
+        itens: kitItens,
+        minimo: 0,
+      };
+      if (editingId) onEditProduct(editingId, data); else onAddProduct(data);
+    } else {
+      if (form.qtd === '') return;
+      const data = {
+        nome: form.nome,
+        tipo: 'produto',
+        preco: parseFloat(form.preco) || 0,
+        custo: parseFloat(form.custo) || 0,
+        qtd: parseInt(form.qtd) || 0,
+        minimo: parseInt(form.minimo) || 0,
+      };
+      if (editingId) onEditProduct(editingId, data); else onAddProduct(data);
+    }
+    fecharForm();
+  };
+
+  return (
+    <div>
+      <div className="card panel">
+        <div className="section-title">
+          <span>Produtos cadastrados</span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {!showForm && <button className="btn btn-outline btn-sm" onClick={abrirNovoKit}>+ Novo kit</button>}
+            <button className="btn btn-primary btn-sm" onClick={() => (showForm ? fecharForm() : abrirNovo())}>
+              {showForm ? 'Fechar' : '+ Novo produto'}
+            </button>
+          </div>
+        </div>
+
+        <div className="prod-search-wrap" style={{ marginBottom: 16 }}>
+          <svg viewBox="0 0 24 24" fill="none" className="prod-search-icon"><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/><path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+          <input
+            type="text"
+            className="prod-search-input"
+            placeholder="Buscar produto..."
+            value={buscaEstoque}
+            onChange={e => setBuscaEstoque(e.target.value)}
+          />
+          {buscaEstoque && (
+            <button className="prod-search-clear" onClick={() => setBuscaEstoque('')} aria-label="Limpar busca">×</button>
+          )}
+        </div>
+
+        {showForm && (
+          <div style={{ background: 'var(--creme)', padding: 16, borderRadius: 12, marginBottom: 16 }}>
+            {editingId && <div className="section-sub" style={{ marginBottom: 10, fontWeight: 700, color: 'var(--cobre)' }}>Editando {tipo === 'kit' ? 'kit' : 'produto'}</div>}
+
+            {!editingId && (
+              <div className="form-row" style={{ marginBottom: 4 }}>
+                <button className={`method-btn ${tipo === 'produto' ? 'selected' : ''}`} onClick={() => setTipo('produto')} style={{ flex: 1 }}>
+                  Produto normal
+                </button>
+                <button className={`method-btn ${tipo === 'kit' ? 'selected' : ''}`} onClick={() => setTipo('kit')} style={{ flex: 1 }}>
+                  Kit (combo de produtos)
+                </button>
+              </div>
+            )}
+
+            <div className="form-row">
+              <div className="form-field" style={{ flex: 2 }}>
+                <label>Nome {tipo === 'kit' ? 'do kit' : 'do produto'}</label>
+                <input value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} placeholder={tipo === 'kit' ? 'Ex: Kit Rapadura + Açúcar Mascavo' : 'Ex: Cachaça Envelhecida'} />
+              </div>
+              <div className="form-field">
+                <label>Preço de venda {tipo === 'kit' ? 'do kit' : ''}</label>
+                <input type="number" value={form.preco} onChange={e => setForm({ ...form, preco: e.target.value })} placeholder="0,00" />
+              </div>
+            </div>
+
+            {tipo === 'produto' ? (
+              <div className="form-row">
+                <div className="form-field">
+                  <label>Custo unitário</label>
+                  <input type="number" value={form.custo} onChange={e => setForm({ ...form, custo: e.target.value })} placeholder="0,00" />
+                </div>
+                <div className="form-field">
+                  <label>{editingId ? 'Quantidade em estoque' : 'Quantidade inicial'}</label>
+                  <input type="number" value={form.qtd} onChange={e => setForm({ ...form, qtd: e.target.value })} placeholder="0" />
+                </div>
+                <div className="form-field">
+                  <label>Estoque mínimo</label>
+                  <input type="number" value={form.minimo} onChange={e => setForm({ ...form, minimo: e.target.value })} placeholder="0" />
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="modal-sub" style={{ margin: '4px 0 10px' }}>
+                  Monte o kit escolhendo os produtos e quantidades que ele consome. Ao vender o kit, cada produto abaixo é descontado do estoque separadamente — o kit em si não tem estoque próprio, ele nasce dos produtos que o compõem.
+                </p>
+
+                <div className="form-row" style={{ alignItems: 'flex-end' }}>
+                  <div className="form-field" style={{ flex: 2 }}>
+                    <label>Produto</label>
+                    <select value={kitProdutoSel} onChange={e => setKitProdutoSel(e.target.value)}>
+                      <option value="">Selecione...</option>
+                      {produtosNormais.map(p => <option key={p.id} value={p.id}>{p.nome} ({p.qtd} un em estoque)</option>)}
+                    </select>
+                  </div>
+                  <div className="form-field" style={{ maxWidth: 90 }}>
+                    <label>Qtd</label>
+                    <input type="number" min="1" value={kitQtdSel} onChange={e => setKitQtdSel(e.target.value)} />
+                  </div>
+                  <button className="btn btn-outline" style={{ marginBottom: 2 }} onClick={adicionarComponente}>+ Adicionar</button>
+                </div>
+
+                {kitItens.length > 0 && (
+                  <div style={{ marginTop: 8, marginBottom: 10 }}>
+                    {kitItens.map(it => {
+                      const p = products.find(pp => pp.id === it.productId);
+                      return (
+                        <div className="ajuste-item" key={it.productId}>
+                          <span style={{ fontSize: 13.5 }}>{it.qtd}× {p ? p.nome : '(produto removido)'}</span>
+                          <button className="btn-danger-ghost" onClick={() => removerComponente(it.productId)}>remover</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="form-row">
+                  <div className="form-field">
+                    <label>Custo do kit (auto: {formatBRL(custoKitCalculado)})</label>
+                    <input type="number" value={form.custo} onChange={e => setForm({ ...form, custo: e.target.value })} placeholder={formatBRL(custoKitCalculado)} />
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button className="btn btn-primary" onClick={submit}>{editingId ? 'Salvar alterações' : (tipo === 'kit' ? 'Criar kit' : 'Adicionar ao estoque')}</button>
+              {editingId && <button className="btn btn-outline" onClick={fecharForm}>Cancelar</button>}
+            </div>
+          </div>
+        )}
+
+        <div style={{ overflowX: 'auto' }}>
+          <table>
+            <thead>
+              <tr>
+                <th>Produto</th>
+                <th>Preço</th>
+                <th>Custo</th>
+                <th>Qtd. em estoque</th>
+                <th>Ajustar</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {productsFiltrados.map(p => {
+                const isKit = p.tipo === 'kit';
+                const disp = estoqueDisponivel(p, products);
+                const low = !isKit && p.qtd <= p.minimo;
+                return (
+                  <tr key={p.id}>
+                    <td style={{ fontWeight: 700 }}>
+                      {p.nome}{isKit && <span className="kit-badge kit-badge-inline">KIT</span>}
+                      {isKit && (
+                        <div style={{ fontWeight: 400, fontSize: 12, color: '#8a7a68', marginTop: 2 }}>
+                          {p.itens.map(it => {
+                            const comp = products.find(pp => pp.id === it.productId);
+                            return `${it.qtd}× ${comp ? comp.nome : '?'}`;
+                          }).join(' + ')}
+                        </div>
+                      )}
+                    </td>
+                    <td>{formatBRL(p.preco)}</td>
+                    <td style={{ color: '#8a7a68' }}>{formatBRL(p.custo)}</td>
+                    <td><span className={`qty-badge ${low ? 'low' : ''}`}>{disp} {isKit ? 'kits' : 'un'}</span></td>
+                    <td>
+                      {isKit ? (
+                        <span style={{ fontSize: 11.5, color: '#8a7a68' }}>ajuste os componentes</span>
+                      ) : (
+                        <div className="stepper">
+                          <button className="step-btn" onClick={() => onUpdateStock(p.id, -1)}>−</button>
+                          <button className="step-btn" onClick={() => onUpdateStock(p.id, 1)}>+</button>
+                          <button className="step-btn" style={{ width: 'auto', padding: '0 8px', fontSize: 11 }} onClick={() => onUpdateStock(p.id, 10)}>+10</button>
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      <div className="row-actions">
+                        <button className="btn-edit-ghost" onClick={() => abrirEdicao(p)}>editar</button>
+                        <button className="btn-danger-ghost" onClick={() => onDelete(p.id)}>remover</button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {products.length === 0 && (
+            <div className="empty-state">
+              <p>Nenhum produto ainda — adicione o primeiro acima</p>
+            </div>
+          )}
+          {products.length > 0 && productsFiltrados.length === 0 && (
+            <div className="empty-state">
+              <p>Nenhum produto encontrado para "{buscaEstoque}"</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
